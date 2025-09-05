@@ -182,6 +182,8 @@ std::shared_future<std::unique_ptr<RTCKernel>>
         std::shared_future<std::unique_ptr<RTCKernel>> compile_future
             = compile_promise.get_future();
         std::thread compile_thread(compile, std::move(compile_promise));
+        // we'll wait for the future so the thread can continue
+        // without being managed by this object
         compile_thread.detach();
         return compile_future;
     }

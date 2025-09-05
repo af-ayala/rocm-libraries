@@ -605,12 +605,14 @@ std::vector<char> RTCCache::cached_compile(const std::string&          kernel_na
                 }
             };
 
-            std::promise<std::vector<char>>       compile_promise;
-            std::shared_future<std::vector<char>> compile_future = compile_promise.get_future();
+            std::promise<std::vector<char>> compile_promise;
+            pc = RTCCache::single->pending_compiles.emplace(key, compile_promise.get_future())
+                     .first;
             std::thread compile_thread(compile, std::move(compile_promise));
+            // we'll wait for the future so the thread can continue
+            // without being managed by this object
             compile_thread.detach();
 
-            pc = RTCCache::single->pending_compiles.emplace(key, compile_future).first;
             cleanup.emplace(key);
         }
         result = pc->second;
