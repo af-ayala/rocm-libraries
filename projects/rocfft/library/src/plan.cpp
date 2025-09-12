@@ -2307,20 +2307,6 @@ void rocfft_plan_t::GlobalTransposeA2ASubcomm(size_t                     elem_si
         }
     }
 
-    // check uniformity for alltoall within the subcomm
-    const bool uniform_counts
-        = std::all_of(
-              send_counts.begin(), send_counts.end(), [&](size_t c) { return c == send_counts[0]; })
-          && std::all_of(recv_counts.begin(), recv_counts.end(), [&](size_t c) {
-                 return c == recv_counts[0];
-             });
-
-    size_t uniform_count_inside_subcomm = 0;
-    if(uniform_counts)
-        uniform_count_inside_subcomm = send_counts[0];
-    else
-        throw std::runtime_error("Non-uniform send_counts in pencil subcomm!");
-
     // add the all-to-all op itself, which depends on pack ops
     auto alltoall_ptr = std::make_unique<CommAllToAll>(precision,
                                                        desc.inArrayType,
@@ -2330,10 +2316,7 @@ void rocfft_plan_t::GlobalTransposeA2ASubcomm(size_t                     elem_si
                                                        recv_counts,
                                                        BufferPtr::temp(send_buf.data()),
                                                        BufferPtr::temp(recv_buf.data()),
-                                                       uniform_counts,
                                                        std::move(subcomm));
-
-    alltoall_ptr->set_uniform_count_inside_subcomm(uniform_count_inside_subcomm);
 
     auto alltoall_op                    = AddMultiPlanItem(std::move(alltoall_ptr), pack_ops);
     multiPlan[alltoall_op]->group       = itemGroup;
@@ -2515,14 +2498,6 @@ void rocfft_plan_t::GlobalTransposeA2A(size_t                     elem_size,
         }
     }
 
-    // check if uniform exchange to use MPI_Alltoall
-    const bool uniform_counts
-        = std::all_of(
-              send_counts.begin(), send_counts.end(), [&](size_t c) { return c == send_counts[0]; })
-          && std::all_of(recv_counts.begin(), recv_counts.end(), [&](size_t c) {
-                 return c == recv_counts[0];
-             });
-
     // add the all-to-all op itself, which depends on pack ops
     auto alltoall_ptr = std::make_unique<CommAllToAll>(precision,
                                                        desc.inArrayType,
@@ -2531,8 +2506,7 @@ void rocfft_plan_t::GlobalTransposeA2A(size_t                     elem_size,
                                                        recv_offsets,
                                                        recv_counts,
                                                        BufferPtr::temp(send_buf.data()),
-                                                       BufferPtr::temp(recv_buf.data()),
-                                                       uniform_counts);
+                                                       BufferPtr::temp(recv_buf.data()));
 
     auto alltoall_op                    = AddMultiPlanItem(std::move(alltoall_ptr), pack_ops);
     multiPlan[alltoall_op]->group       = itemGroup;
