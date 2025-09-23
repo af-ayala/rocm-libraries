@@ -752,6 +752,36 @@ catch(...)
     return rocfft_handle_exception();
 }
 
+rocfft_status rocfft_plan_description_set_load_callback(rocfft_plan_description description,
+                                                        const char*             symbol_name,
+                                                        void*                   bitcode_data,
+                                                        size_t                  bitcode_len_bytes,
+                                                        void*                   cb_data,
+                                                        size_t                  shared_mem_bytes)
+try
+{
+    return rocfft_status_failure;
+}
+catch(...)
+{
+    return rocfft_handle_exception();
+}
+
+rocfft_status rocfft_plan_description_set_store_callback(rocfft_plan_description description,
+                                                         const char*             symbol_name,
+                                                         void*                   bitcode_data,
+                                                         size_t                  bitcode_len_bytes,
+                                                         void*                   cb_data,
+                                                         size_t                  shared_mem_bytes)
+try
+{
+    return rocfft_status_failure;
+}
+catch(...)
+{
+    return rocfft_handle_exception();
+}
+
 std::string rocfft_bench_command(const rocfft_plan& plan)
 {
     rocfft_params params;

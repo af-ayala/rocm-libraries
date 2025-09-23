@@ -345,6 +345,88 @@ ROCFFT_EXPORT rocfft_status rocfft_plan_description_set_comm(rocfft_plan_descrip
                                                              rocfft_comm_type        comm_type,
                                                              void*                   comm_handle);
 
+/*! @brief Set a SPIR-V load callback function on a plan description.
+ *
+ *  @details Set a load callback on a plan description.  The callback
+ *  function is provided as SPIR-V bitcode.
+ *
+ *  Load callbacks have the following signature:
+ *
+ *  @code
+ *  void store_cb(Tdata* data, size_t offset, Tdata element, void* cbdata, void* sharedMem);
+ *  @endcode
+ *
+ *  'Tdata' is the type of a single element of the input buffer.  It is
+ *  the caller's responsibility to ensure that the function type is
+ *  appropriate for the plan (for example, a single-precision
+ *  real-to-complex transform would load single-precision real
+ *  elements).
+ *
+ *  If either of 'symbol_name' or 'bitcode_data' is null, or if
+ *  'bitcode_len_bytes' is 0, any previously registered load callback
+ *  is cleared.
+ *
+ *  Currently, 'shared_mem_bytes' must be 0.  Callbacks are not
+ *  supported on transforms that use planar formats for either input
+ *  or output.
+ *
+ *  @param[in] description description handle
+ *  @param[in] symbol_name name of the symbol in the bitcode
+ *  @param[in] bitcode_data pointer to bitcode data
+ *  @param[in] bitcode_len_bytes length of bitcode data, in bytes
+ *  @param[in] cb_data function data, passed to the callback function when it is called
+ *  @param[in] shared_mem_bytes amount of shared memory to allocate for the callback function to use
+ * 
+ */
+ROCFFT_EXPORT rocfft_status
+    rocfft_plan_description_set_load_callback(rocfft_plan_description description,
+                                              const char*             symbol_name,
+                                              void*                   bitcode_data,
+                                              size_t                  bitcode_len_bytes,
+                                              void*                   cb_data,
+                                              size_t                  shared_mem_bytes);
+
+/*! @brief Set a SPIR-V store callback function on a plan description.
+ *
+ *  @details Set a store callback on a plan description.  The callback
+ *  function is provided as SPIR-V bitcode.
+ *
+ *  Store callbacks have the following signature:
+ *
+ *  @code
+ *  Tdata store_cb(Tdata* data, size_t offset, void* cbdata, void* sharedMem);
+ *  @endcode
+ *
+ *  'Tdata' is the type of a single element of the output buffer.  It is
+ *  the caller's responsibility to ensure that the function type is
+ *  appropriate for the plan (for example, a single-precision
+ *  real-to-complex transform would store single-precision complex
+ *  elements).
+ *
+ *  If either of 'symbol_name' or 'bitcode_data' is null, or if
+ *  'bitcode_len_bytes' is 0, any previously registered store callback
+ *  is cleared.
+ *
+ *  Currently, 'shared_mem_bytes' must be 0.  Callbacks are not
+ *  supported on transforms that use planar formats for either input
+ *  or output.
+ *
+ *  @param[in] description description handle
+ *  @param[in] symbol_name name of the symbol in the bitcode
+ *  @param[in] bitcode_data pointer to bitcode data
+ *  @param[in] bitcode_len_bytes length of bitcode data, in bytes
+ *  @param[in] cb_data function data, passed to the callback function when it is called
+ *  @param[in] shared_mem_bytes amount of shared memory to allocate for the callback function to use
+ * 
+ */
+ROCFFT_EXPORT rocfft_status
+    rocfft_plan_description_set_store_callback(rocfft_plan_description description,
+                                               const char*             symbol_name,
+                                               void*                   bitcode_data,
+                                               size_t                  bitcode_len_bytes,
+                                               void*                   cb_data,
+                                               size_t                  shared_mem_bytes);
+
 /*! @brief Define a brick as part of a decomposition of a field.
  *
  * Fields can contain a full-dimensional data distribution.  The
