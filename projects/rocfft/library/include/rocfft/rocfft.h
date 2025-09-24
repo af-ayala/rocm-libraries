@@ -613,10 +613,11 @@ ROCFFT_EXPORT rocfft_status rocfft_execution_info_set_mode( rocfft_execution_inf
 ROCFFT_EXPORT rocfft_status rocfft_execution_info_set_stream(rocfft_execution_info info,
                                                              void*                 stream);
 
-/*! @brief Set a load callback for a plan execution (experimental)
+/*! @brief Set a legacy load callback for a plan execution (deprecated)
  *  @details This function specifies a user-defined callback function
  *  that is run to load input from global memory at the start of the
- *  transform.  Callbacks are an experimental feature in rocFFT.
+ *  transform.  Legacy callbacks are a deprecated feature in rocFFT,
+ *  and users should use SPIR-V callbacks instead.
  *
  *  Callback function pointers/data are given as arrays, with one
  *  function/data pointer per brick in the input field of the plan.
@@ -660,10 +661,11 @@ ROCFFT_EXPORT rocfft_status rocfft_execution_info_set_load_callback(rocfft_execu
                                                                     void** cb_data,
                                                                     size_t shared_mem_bytes);
 
-/*! @brief Set a store callback for a plan execution (experimental)
+/*! @brief Set a legacy store callback for a plan execution (deprecated)
  *  @details This function specifies a user-defined callback function
  *  that is run to store output to global memory at the end of the
- *  transform.  Callbacks are an experimental feature in rocFFT.
+ *  transform.  Legacy callbacks are a deprecated feature in rocFFT,
+ *  and users should use SPIR-V callbacks instead.
  *
  *  Callback function pointers/data are given as arrays, with one
  *  function/data pointer per device executing this plan.  Currently,
