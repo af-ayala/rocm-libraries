@@ -146,6 +146,12 @@ struct rocfft_plan_description_t
     std::vector<rocfft_field_t> inFields;
     std::vector<rocfft_field_t> outFields;
 
+    // user-provided spir-v callback functions
+    std::vector<char> spirv_load_cb;
+    std::string       spirv_load_cb_symbol;
+    std::vector<char> spirv_store_cb;
+    std::string       spirv_store_cb_symbol;
+
     // Multi-process communicator info:
     rocfft_comm_type comm_type = rocfft_comm_none;
 #ifdef ROCFFT_MPI_ENABLE
