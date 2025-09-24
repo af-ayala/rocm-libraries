@@ -4638,13 +4638,19 @@ void RuntimeCompilePlan(ExecPlan& execPlan)
     // don't spend time compiling callback
     if(need_callbacks && !is_tuning)
     {
-        load_node->compiledKernelWithCallbacks = RTCKernel::runtime_compile(
-            load_node->getLeafNode(), execPlan.deviceProp.gcnArchName, kernel_name, true);
+        load_node->compiledKernelWithCallbacks
+            = RTCKernel::runtime_compile(load_node->getLeafNode(),
+                                         execPlan.deviceProp.gcnArchName,
+                                         kernel_name,
+                                         load_node->GetCallbackType());
 
         if(store_node != load_node)
         {
-            store_node->compiledKernelWithCallbacks = RTCKernel::runtime_compile(
-                store_node->getLeafNode(), execPlan.deviceProp.gcnArchName, kernel_name, true);
+            store_node->compiledKernelWithCallbacks
+                = RTCKernel::runtime_compile(store_node->getLeafNode(),
+                                             execPlan.deviceProp.gcnArchName,
+                                             kernel_name,
+                                             store_node->GetCallbackType());
         }
     }
 

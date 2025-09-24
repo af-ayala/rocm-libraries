@@ -117,7 +117,7 @@ struct RTCKernel
         runtime_compile(const LeafNode&    node,
                         const std::string& gpu_arch,
                         std::string&       kernel_name,
-                        bool               enable_callbacks = false);
+                        CallbackType       cbtype = CallbackType::NONE);
 
     // take already-compiled code object and prepare to launch the
     // named kernel

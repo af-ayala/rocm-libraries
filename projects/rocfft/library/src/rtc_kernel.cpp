@@ -126,7 +126,7 @@ std::shared_future<std::unique_ptr<RTCKernel>>
     RTCKernel::runtime_compile(const LeafNode&    node,
                                const std::string& gpu_arch,
                                std::string&       kernel_name,
-                               bool               enable_callbacks)
+                               CallbackType       cbtype)
 {
 #ifndef ROCFFT_DEBUG_GENERATE_KERNEL_HARNESS
     int deviceId = 0;
@@ -137,20 +137,19 @@ std::shared_future<std::unique_ptr<RTCKernel>>
 
     RTCGenerator generator;
     // try each type of generator until one is valid
-    generator = RTCKernelStockham::generate_from_node(node, gpu_arch, enable_callbacks);
+    generator = RTCKernelStockham::generate_from_node(node, gpu_arch, cbtype);
     if(!generator.valid())
-        generator = RTCKernelTranspose::generate_from_node(node, gpu_arch, enable_callbacks);
+        generator = RTCKernelTranspose::generate_from_node(node, gpu_arch, cbtype);
     if(!generator.valid())
-        generator = RTCKernelRealComplex::generate_from_node(node, gpu_arch, enable_callbacks);
+        generator = RTCKernelRealComplex::generate_from_node(node, gpu_arch, cbtype);
     if(!generator.valid())
-        generator = RTCKernelRealComplexEven::generate_from_node(node, gpu_arch, enable_callbacks);
+        generator = RTCKernelRealComplexEven::generate_from_node(node, gpu_arch, cbtype);
     if(!generator.valid())
-        generator = RTCKernelRealComplexEvenTranspose::generate_from_node(
-            node, gpu_arch, enable_callbacks);
+        generator = RTCKernelRealComplexEvenTranspose::generate_from_node(node, gpu_arch, cbtype);
     if(!generator.valid())
-        generator = RTCKernelBluesteinSingle::generate_from_node(node, gpu_arch, enable_callbacks);
+        generator = RTCKernelBluesteinSingle::generate_from_node(node, gpu_arch, cbtype);
     if(!generator.valid())
-        generator = RTCKernelBluesteinMulti::generate_from_node(node, gpu_arch, enable_callbacks);
+        generator = RTCKernelBluesteinMulti::generate_from_node(node, gpu_arch, cbtype);
 
     if(generator.valid())
     {

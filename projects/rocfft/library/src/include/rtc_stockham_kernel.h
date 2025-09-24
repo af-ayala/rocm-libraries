@@ -31,9 +31,8 @@ struct RTCKernelStockham : public RTCKernel
     {
     }
 
-    static RTCKernel::RTCGenerator generate_from_node(const LeafNode&    node,
-                                                      const std::string& gpu_arch,
-                                                      bool               enable_callbacks);
+    static RTCKernel::RTCGenerator
+        generate_from_node(const LeafNode& node, const std::string& gpu_arch, CallbackType cbtype);
 
     virtual RTCKernelArgs get_launch_args(DeviceCallIn& data) override;
 

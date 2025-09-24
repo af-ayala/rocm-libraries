@@ -443,7 +443,7 @@ void SetDefaultCallback(const TreeNode* node, const SetCallbackType& type, void*
     auto result = hipSuccess;
 
     auto array_type = (type == SetCallbackType::LOAD) ? node->inArrayType : node->outArrayType;
-    auto node_callback_type = node->GetCallbackType(true);
+    auto node_callback_type = node->GetCallbackType();
 
     bool is_complex = array_type_is_complex(array_type);
     // load r2c kernels and store c2r kernels need real-valued callbacks
