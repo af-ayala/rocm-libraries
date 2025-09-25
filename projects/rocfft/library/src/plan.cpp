@@ -760,7 +760,34 @@ rocfft_status rocfft_plan_description_set_load_callback(rocfft_plan_description 
                                                         size_t                  shared_mem_bytes)
 try
 {
-    return rocfft_status_failure;
+    log_trace(__func__,
+              "description",
+              description,
+              "symbol_name",
+              symbol_name,
+              "bitcode_data",
+              bitcode_data,
+              "bitcode_len_bytes",
+              bitcode_len_bytes,
+              "cb_data",
+              cb_data,
+              "shared_mem_bytes",
+              shared_mem_bytes);
+    if(!description)
+        return rocfft_status_invalid_arg_value;
+
+    // shared memory for callbacks is not currently supported
+    if(shared_mem_bytes)
+        return rocfft_status_invalid_arg_value;
+
+    // clear the callback
+    if(!symbol_name || !bitcode_data || !bitcode_len_bytes)
+        description->loadOps.spirv_cb = {};
+    else
+    {
+        description->loadOps.spirv_cb.set(symbol_name, bitcode_data, bitcode_len_bytes, cb_data);
+    }
+    return rocfft_status_success;
 }
 catch(...)
 {
@@ -775,7 +802,34 @@ rocfft_status rocfft_plan_description_set_store_callback(rocfft_plan_description
                                                          size_t                  shared_mem_bytes)
 try
 {
-    return rocfft_status_failure;
+    log_trace(__func__,
+              "description",
+              description,
+              "symbol_name",
+              symbol_name,
+              "bitcode_data",
+              bitcode_data,
+              "bitcode_len_bytes",
+              bitcode_len_bytes,
+              "cb_data",
+              cb_data,
+              "shared_mem_bytes",
+              shared_mem_bytes);
+    if(!description)
+        return rocfft_status_invalid_arg_value;
+
+    // shared memory for callbacks is not currently supported
+    if(shared_mem_bytes)
+        return rocfft_status_invalid_arg_value;
+
+    // clear the callback
+    if(!symbol_name || !bitcode_data || !bitcode_len_bytes)
+        description->storeOps.spirv_cb = {};
+    else
+    {
+        description->storeOps.spirv_cb.set(symbol_name, bitcode_data, bitcode_len_bytes, cb_data);
+    }
+    return rocfft_status_success;
 }
 catch(...)
 {

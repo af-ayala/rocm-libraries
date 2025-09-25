@@ -28,19 +28,53 @@ class RTCKernelArgs;
 class Function;
 class TreeNode;
 
+struct rocfft_spirv_cb_t
+{
+    rocfft_spirv_cb_t() = default;
+    void set(const char* _symbol_name,
+             void*       _bitcode_data,
+             size_t      _bitcode_len_bytes,
+             void*       _cb_data)
+    {
+        symbol_name       = _symbol_name;
+        bitcode_data      = _bitcode_data;
+        bitcode_len_bytes = _bitcode_len_bytes;
+        cb_data           = _cb_data;
+    }
+    bool enabled() const
+    {
+        return symbol_name && bitcode_data && bitcode_len_bytes;
+    }
+
+    // Non-owning pointers to data provided by users
+    const char* symbol_name       = nullptr;
+    void*       bitcode_data      = nullptr;
+    size_t      bitcode_len_bytes = 0;
+    void*       cb_data           = nullptr;
+};
+
 struct LoadOps
 {
     LoadOps() = default;
 
+    // user-provided spir-v load callback
+    rocfft_spirv_cb_t spirv_cb;
+
     // returns true if some load operation is enabled
     bool enabled() const
     {
-        return false;
+        return spirv_cb.enabled();
     }
 
     std::string name_suffix() const
     {
         std::string ret;
+
+        if(spirv_cb.enabled())
+        {
+            // FIXME: think about how to name this for caching
+            ret += "_spvCB";
+        }
         return ret;
     }
 
@@ -61,11 +95,13 @@ struct StoreOps
     StoreOps() = default;
 
     double scale_factor{1.0};
+    // user-provided spir-v store callback
+    rocfft_spirv_cb_t spirv_cb;
 
     // returns true if some store operation is enabled
     bool enabled() const
     {
-        return scale_factor != 1.0;
+        return scale_factor != 1.0 || spirv_cb.enabled();
     }
 
     std::string name_suffix() const
@@ -73,6 +109,12 @@ struct StoreOps
         std::string ret;
         if(scale_factor != 1.0)
             ret += "_scale";
+
+        if(spirv_cb.enabled())
+        {
+            // FIXME: think about how to name this for caching
+            ret += "_spvCB";
+        }
         return ret;
     }
 
