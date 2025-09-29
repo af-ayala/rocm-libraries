@@ -348,7 +348,7 @@ ROCFFT_EXPORT rocfft_status rocfft_plan_description_set_comm(rocfft_plan_descrip
 /*! @brief Set a SPIR-V load callback function on a plan description.
  *
  *  @details Set a load callback on a plan description.  The callback
- *  function is provided as SPIR-V bitcode.
+ *  function is provided as a named symbol in SPIR-V bitcode.
  *
  *  Load callbacks have the following signature:
  *
@@ -365,6 +365,10 @@ ROCFFT_EXPORT rocfft_status rocfft_plan_description_set_comm(rocfft_plan_descrip
  *  If either of 'symbol_name' or 'bitcode_data' is null, or if
  *  'bitcode_len_bytes' is 0, any previously registered load callback
  *  is cleared.
+ *
+ *  Symbol names must only contain alphabetic characters (A-Z, a-z),
+ *  underscores, and digits (0-9).  Additionally, they may not begin
+ *  with digits.
  *
  *  Currently, 'shared_mem_bytes' must be 0.  Callbacks are not
  *  supported on transforms that use planar formats for either input
@@ -389,7 +393,7 @@ ROCFFT_EXPORT rocfft_status
 /*! @brief Set a SPIR-V store callback function on a plan description.
  *
  *  @details Set a store callback on a plan description.  The callback
- *  function is provided as SPIR-V bitcode.
+ *  function is provided as a named symbol in SPIR-V bitcode.
  *
  *  Store callbacks have the following signature:
  *
@@ -406,6 +410,10 @@ ROCFFT_EXPORT rocfft_status
  *  If either of 'symbol_name' or 'bitcode_data' is null, or if
  *  'bitcode_len_bytes' is 0, any previously registered store callback
  *  is cleared.
+ *
+ *  Symbol names must only contain alphabetic characters (A-Z, a-z),
+ *  underscores, and digits (0-9).  Additionally, they may not begin
+ *  with digits.
  *
  *  Currently, 'shared_mem_bytes' must be 0.  Callbacks are not
  *  supported on transforms that use planar formats for either input
