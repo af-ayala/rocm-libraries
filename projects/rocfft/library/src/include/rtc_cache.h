@@ -76,7 +76,7 @@ struct RTCCache
                                             const std::string&          gpu_arch_with_flags,
                                             kernel_src_gen_t            generate_src,
                                             const std::array<char, 32>& generator_sum,
-                                            bool                        cacheable = true);
+                                            bool                        has_spirv = false);
 
     RTCCache();
     ~RTCCache() = default;

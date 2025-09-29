@@ -29,6 +29,7 @@
 #include "logging.h"
 #include "rtc_bluestein_kernel.h"
 #include "rtc_cache.h"
+#include "rtc_compile.h"
 #include "rtc_realcomplex_kernel.h"
 #include "rtc_stockham_kernel.h"
 #include "rtc_transpose_kernel.h"
@@ -163,10 +164,17 @@ std::shared_future<std::unique_ptr<RTCKernel>>
             }
             try
             {
-                bool cacheable = node.loadOps.cacheable() && node.storeOps.cacheable();
+                bool has_spirv = node.loadOps.has_spirv() || node.storeOps.has_spirv();
+
+                std::vector<char> code = RTCCache::cached_compile(kernel_name,
+                                                                  has_spirv ? ARCH_SPIRV : gpu_arch,
+                                                                  generator.generate_src,
+                                                                  generator_sum());
+
+                // spir-v
 
                 std::vector<char> code = RTCCache::cached_compile(
-                    kernel_name, gpu_arch, generator.generate_src, generator_sum(), cacheable);
+                    kernel_name, gpu_arch, generator.generate_src, generator_sum(), has_spirv);
                 compile_promise.set_value(generator.construct_rtckernel(
                     kernel_name, code, generator.gridDim, generator.blockDim));
             }

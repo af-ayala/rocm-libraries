@@ -66,10 +66,8 @@ struct LoadOps
         return spirv_cb.enabled();
     }
 
-    bool cacheable() const
+    bool has_spirv() const
     {
-        // don't cache kernels with spir-v callbacks, to prevent
-        // confusing kernels from two plans that differ only by callbacks
         return !spirv_cb.enabled();
     }
 
@@ -120,7 +118,7 @@ struct StoreOps
         return scale_factor != 1.0 || spirv_cb.enabled();
     }
 
-    bool cacheable() const
+    bool has_spirv() const
     {
         // don't cache kernels with spir-v callbacks, to prevent
         // confusing kernels from two plans that differ only by callbacks
