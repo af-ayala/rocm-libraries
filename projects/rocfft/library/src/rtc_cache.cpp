@@ -411,11 +411,12 @@ static std::string gpu_arch_strip_flags(const std::string gpu_arch_with_flags)
 static std::vector<char> cached_compile_impl(const std::string&          kernel_name,
                                              const std::string&          gpu_arch,
                                              kernel_src_gen_t            generate_src,
-                                             const std::array<char, 32>& generator_sum)
+                                             const std::array<char, 32>& generator_sum,
+                                             bool                        cacheable)
 {
     // check cache first
     std::vector<char> code;
-    if(RTCCache::single)
+    if(cacheable && RTCCache::single)
     {
         code = RTCCache::single->get_code_object(kernel_name, gpu_arch, generator_sum);
     }
@@ -534,7 +535,7 @@ static std::vector<char> cached_compile_impl(const std::string&          kernel_
             << std::endl;
     }
 
-    if(RTCCache::single)
+    if(cacheable && RTCCache::single)
     {
         RTCCache::single->store_code_object(kernel_name, gpu_arch, generator_sum, code);
     }
@@ -563,7 +564,8 @@ struct PendingCompileCleanup
 std::vector<char> RTCCache::cached_compile(const std::string&          kernel_name,
                                            const std::string&          gpu_arch_with_flags,
                                            kernel_src_gen_t            generate_src,
-                                           const std::array<char, 32>& generator_sum)
+                                           const std::array<char, 32>& generator_sum,
+                                           bool                        cacheable)
 {
 #ifdef ADDRESS_SANITIZER
     // The address sanitizer is reported to work better when we include xnack+, so don't strip this
@@ -588,7 +590,9 @@ std::vector<char> RTCCache::cached_compile(const std::string&          kernel_na
     {
         // check the map of pending work for this compile
         std::lock_guard<std::mutex> lock(RTCCache::single->pending_compiles_mutex);
-        auto                        pc = RTCCache::single->pending_compiles.find(key);
+        // if this is an uncacheable compile, don't look at pending compile
+        auto pc = cacheable ? RTCCache::single->pending_compiles.find(key)
+                            : RTCCache::single->pending_compiles.end();
         if(pc == RTCCache::single->pending_compiles.end())
         {
             // not in the pending map, so add a future and launch the
@@ -596,8 +600,8 @@ std::vector<char> RTCCache::cached_compile(const std::string&          kernel_na
             auto compile = [=](std::promise<std::vector<char>> compile_promise) {
                 try
                 {
-                    compile_promise.set_value(
-                        cached_compile_impl(kernel_name, gpu_arch, generate_src, generator_sum));
+                    compile_promise.set_value(cached_compile_impl(
+                        kernel_name, gpu_arch, generate_src, generator_sum, cacheable));
                 }
                 catch(std::exception e)
                 {
@@ -621,7 +625,8 @@ std::vector<char> RTCCache::cached_compile(const std::string&          kernel_na
     {
         // no cache?  just directly compile
         std::promise<std::vector<char>> p;
-        p.set_value(cached_compile_impl(kernel_name, gpu_arch, generate_src, generator_sum));
+        p.set_value(
+            cached_compile_impl(kernel_name, gpu_arch, generate_src, generator_sum, cacheable));
         result = p.get_future();
     }
     return result.get();
