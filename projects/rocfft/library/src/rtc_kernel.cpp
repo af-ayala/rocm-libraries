@@ -155,7 +155,7 @@ std::shared_future<std::unique_ptr<RTCKernel>>
     {
         kernel_name = generator.generate_name();
 
-        auto compile = [=](std::promise<std::unique_ptr<RTCKernel>> compile_promise) {
+        auto compile = [=, &node](std::promise<std::unique_ptr<RTCKernel>> compile_promise) {
             if(hipSetDevice(deviceId) != hipSuccess)
             {
                 compile_promise.set_exception(
@@ -163,8 +163,10 @@ std::shared_future<std::unique_ptr<RTCKernel>>
             }
             try
             {
+                bool cacheable = node.loadOps.cacheable() && node.storeOps.cacheable();
+
                 std::vector<char> code = RTCCache::cached_compile(
-                    kernel_name, gpu_arch, generator.generate_src, generator_sum());
+                    kernel_name, gpu_arch, generator.generate_src, generator_sum(), cacheable);
                 compile_promise.set_value(generator.construct_rtckernel(
                     kernel_name, code, generator.gridDim, generator.blockDim));
             }
