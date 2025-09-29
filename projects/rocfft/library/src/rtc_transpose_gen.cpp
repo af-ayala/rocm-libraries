@@ -366,7 +366,8 @@ std::string transpose_rtc(const std::string& kernel_name, const TransposeSpecs& 
 
     func.body += write_loop;
 
-    make_load_store_ops(func, specs.loadOps, specs.storeOps);
+    std::string ops_declarations;
+    make_load_store_ops(func, specs.loadOps, specs.storeOps, ops_declarations);
 
     if(array_type_is_planar(specs.inArrayType))
         func = make_planar(func, "input");
@@ -375,6 +376,7 @@ std::string transpose_rtc(const std::string& kernel_name, const TransposeSpecs& 
 
     func = make_callback_realcomplex(func, specs.cbtype);
 
+    src += ops_declarations;
     src += func.render();
 
     write_standalone_test_harness(func, src);

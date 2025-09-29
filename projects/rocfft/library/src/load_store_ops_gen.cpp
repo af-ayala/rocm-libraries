@@ -103,7 +103,8 @@ std::string load_store_name_suffix(const std::optional<LoadOps>&  loadOps,
 
 void make_load_store_ops(Function&                      f,
                          const std::optional<LoadOps>&  loadOps,
-                         const std::optional<StoreOps>& storeOps)
+                         const std::optional<StoreOps>& storeOps,
+                         std::string&                   ops_declarations)
 {
     if(loadOps && loadOps->enabled())
         f = loadOps->add_ops(f);

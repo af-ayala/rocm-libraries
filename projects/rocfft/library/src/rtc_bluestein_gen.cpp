@@ -113,7 +113,8 @@ std::string bluestein_single_rtc(const std::string& kernel_name, const Bluestein
 
     func.body += operations.lower();
 
-    make_load_store_ops(func, specs.loadOps, specs.storeOps);
+    std::string ops_declarations;
+    make_load_store_ops(func, specs.loadOps, specs.storeOps, ops_declarations);
 
     if(specs.placement == rocfft_placement_notinplace)
     {
@@ -132,6 +133,7 @@ std::string bluestein_single_rtc(const std::string& kernel_name, const Bluestein
 
     func = make_callback_realcomplex(func, specs.cbtype);
 
+    src += ops_declarations;
     src += func.render();
 
     write_standalone_test_harness(func, src);
@@ -385,13 +387,15 @@ std::string bluestein_multi_rtc(const std::string& kernel_name, const BluesteinM
         throw std::runtime_error("invalid bluestein rtc scheme");
     }
 
-    make_load_store_ops(func, specs.loadOps, specs.storeOps);
+    std::string ops_declarations;
+    make_load_store_ops(func, specs.loadOps, specs.storeOps, ops_declarations);
 
     if(array_type_is_planar(specs.inArrayType))
         func = make_planar(func, "input");
     if(array_type_is_planar(specs.outArrayType))
         func = make_planar(func, "output");
 
+    src += ops_declarations;
     src += func.render();
     write_standalone_test_harness(func, src);
     return src;

@@ -286,13 +286,15 @@ std::string r2c_copy_rtc(const std::string& kernel_name, const RealComplexSpecs&
         }
     }
 
-    make_load_store_ops(func, specs.loadOps, specs.storeOps);
+    std::string ops_declarations;
+    make_load_store_ops(func, specs.loadOps, specs.storeOps, ops_declarations);
 
     if(array_type_is_planar(specs.inArrayType))
         func = make_planar(func, "input");
     if(array_type_is_planar(specs.outArrayType))
         func = make_planar(func, "output");
 
+    src += ops_declarations;
     src += func.render();
     write_standalone_test_harness(func, src);
     return src;
@@ -572,13 +574,15 @@ std::string realcomplex_even_rtc(const std::string& kernel_name, const RealCompl
 
     func.body += guard;
 
-    make_load_store_ops(func, specs.loadOps, specs.storeOps);
+    std::string ops_declarations;
+    make_load_store_ops(func, specs.loadOps, specs.storeOps, ops_declarations);
 
     if(array_type_is_planar(specs.inArrayType))
         func = make_planar(func, "input");
     if(array_type_is_planar(specs.outArrayType))
         func = make_planar(func, "output");
 
+    src += ops_declarations;
     src += func.render();
     write_standalone_test_harness(func, src);
     return src;
@@ -1099,13 +1103,15 @@ std::string realcomplex_even_transpose_rtc(const std::string&                   
         func.body += butterfly;
     }
 
-    make_load_store_ops(func, specs.loadOps, specs.storeOps);
+    std::string ops_declarations;
+    make_load_store_ops(func, specs.loadOps, specs.storeOps, ops_declarations);
 
     if(array_type_is_planar(specs.inArrayType))
         func = make_planar(func, "input");
     if(array_type_is_planar(specs.outArrayType))
         func = make_planar(func, "output");
 
+    src += ops_declarations;
     src += func.render();
     write_standalone_test_harness(func, src);
     return src;
