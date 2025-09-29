@@ -106,8 +106,15 @@ void make_load_store_ops(Function&                      f,
                          const std::optional<StoreOps>& storeOps,
                          std::string&                   ops_declarations)
 {
+    ops_declarations.clear();
     if(loadOps && loadOps->enabled())
+    {
         f = loadOps->add_ops(f);
+        ops_declarations += loadOps->forward_decls();
+    }
     if(storeOps && storeOps->enabled())
+    {
         f = storeOps->add_ops(f);
+        ops_declarations += storeOps->forward_decls();
+    }
 }

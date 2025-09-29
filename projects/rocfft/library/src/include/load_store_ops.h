@@ -73,6 +73,15 @@ struct LoadOps
         return !spirv_cb.enabled();
     }
 
+    std::string forward_decls() const
+    {
+        std::string ret;
+        if(spirv_cb.enabled())
+            ret += std::string("extern \"C\" __device__ scalar_type ") + spirv_cb.symbol_name
+                   + "(const scalar_type*, size_t, void*, void*);\n";
+        return ret;
+    }
+
     std::string name_suffix() const
     {
         std::string ret;
@@ -116,6 +125,15 @@ struct StoreOps
         // don't cache kernels with spir-v callbacks, to prevent
         // confusing kernels from two plans that differ only by callbacks
         return !spirv_cb.enabled();
+    }
+
+    std::string forward_decls() const
+    {
+        std::string ret;
+        if(spirv_cb.enabled())
+            ret += std::string("extern \"C\" __device__ void ") + spirv_cb.symbol_name
+                   + "(scalar_type*, size_t, scalar_type, void*, void*);\n";
+        return ret;
     }
 
     std::string name_suffix() const
