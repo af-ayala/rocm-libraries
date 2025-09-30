@@ -171,7 +171,23 @@ std::shared_future<std::unique_ptr<RTCKernel>>
                                                                   generator.generate_src,
                                                                   generator_sum());
 
-                // spir-v
+                // If this is SPIR-V, link it together with the
+                // user-specified callbacks to produce a launchable
+                // code object
+                if(has_spirv)
+                {
+                    hipLink_wrapper_t linker;
+                    if(node.loadOps.has_spirv())
+                        linker.link(const_cast<void*>(node.loadOps.spirv_cb.bitcode_data),
+                                    node.loadOps.spirv_cb.bitcode_len_bytes,
+                                    "loadcb.spv");
+                    if(node.storeOps.has_spirv())
+                        linker.link(const_cast<void*>(node.storeOps.spirv_cb.bitcode_data),
+                                    node.storeOps.spirv_cb.bitcode_len_bytes,
+                                    "storecb.spv");
+                    linker.link(code.data(), code.size(), (kernel_name + ".spv").c_str());
+                    code = linker.complete();
+                }
 
                 std::vector<char> code = RTCCache::cached_compile(
                     kernel_name, gpu_arch, generator.generate_src, generator_sum(), has_spirv);

@@ -21,8 +21,11 @@
 #ifndef ROCFFT_LOAD_STORE_OPS_H
 #define ROCFFT_LOAD_STORE_OPS_H
 
+#include <hip/hip_runtime_api.h>
+#include <hip/linker_types.h>
 #include <optional>
 #include <string>
+#include <vector>
 
 class RTCKernelArgs;
 class Function;
@@ -102,6 +105,49 @@ struct LoadOps
     void print(Tstream& os, const std::string& indent) const
     {
     }
+};
+
+struct hipLink_wrapper_t
+{
+    hipLink_wrapper_t()
+    {
+        if(hipLinkCreate(0, nullptr, nullptr, &state) != hipSuccess)
+            throw std::runtime_error("failed to link create");
+    }
+
+    ~hipLink_wrapper_t()
+    {
+        (void)hipLinkDestroy(state);
+        state = nullptr;
+    }
+
+    void link(void* bitcode_data, size_t bitcode_len_bytes, const char* filename)
+    {
+        if(hipLinkAddData(state,
+                          hipJitInputSpirv,
+                          bitcode_data,
+                          bitcode_len_bytes,
+                          filename,
+                          0,
+                          nullptr,
+                          nullptr)
+           != hipSuccess)
+            throw std::runtime_error("failed to add cb");
+    }
+
+    std::vector<char> complete()
+    {
+        std::vector<char> ret;
+        void*             bin     = nullptr;
+        size_t            binSize = 0;
+        if(hipLinkComplete(state, &bin, &binSize) != hipSuccess)
+            throw std::runtime_error("failed to link complete");
+        auto bin_char = reinterpret_cast<char*>(bin);
+        std::copy(bin_char, bin_char + binSize, std::back_inserter(ret));
+        return ret;
+    }
+
+    hipLinkState_t state = nullptr;
 };
 
 struct StoreOps
