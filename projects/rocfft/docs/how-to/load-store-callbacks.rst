@@ -92,6 +92,9 @@ Compiling callback functions to SPIR-V
 :cpp:func:`rocfft_plan_description_set_store_callback` accept
 callback functions as a named symbol in compiled SPIR-V code.
 
+Symbol names can only contain digits (0-9), letters (a-z, A-Z), and
+underscores, and cannot begin with a digit.
+
 A callback function written as HIP code must first be compiled to
 SPIR-V before it can be added to a plan description.  The following
 example demonstrates how to compile such code using the ``clang++``
