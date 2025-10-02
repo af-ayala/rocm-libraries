@@ -289,12 +289,19 @@ struct hipfftHandle_t
     bool                  autoAllocate        = true;
     bool                  workBufferNeedsFree = false;
 
-    void** load_callback_ptrs       = nullptr;
-    void** load_callback_data       = nullptr;
-    size_t load_callback_lds_bytes  = 0;
-    void** store_callback_ptrs      = nullptr;
-    void** store_callback_data      = nullptr;
-    size_t store_callback_lds_bytes = 0;
+    void**      load_callback_ptrs        = nullptr;
+    const char* load_callback_symbol      = nullptr;
+    const void* load_callback_bitcode     = nullptr;
+    size_t      load_callback_bitcode_len = 0;
+    void**      load_callback_data        = nullptr;
+    size_t      load_callback_lds_bytes   = 0;
+
+    void**      store_callback_ptrs        = nullptr;
+    const char* store_callback_symbol      = nullptr;
+    const void* store_callback_bitcode     = nullptr;
+    size_t      store_callback_bitcode_len = 0;
+    void**      store_callback_data        = nullptr;
+    size_t      store_callback_lds_bytes   = 0;
 
     std::vector<size_t>       inLength;
     std::vector<size_t>       outLength;
@@ -1512,6 +1519,7 @@ catch(...)
 hipfftResult hipfftXtClearCallback(hipfftHandle plan, hipfftXtCallbackType cbtype)
 try
 {
+    hipfftXtSetJITCallback(plan, nullptr, nullptr, 0UL, HIPFFT_CB_LD_COMPLEX, nullptr);
     return hipfftXtSetCallback(plan, nullptr, cbtype, nullptr);
 }
 catch(...)
@@ -1558,6 +1566,50 @@ try
     if(res != rocfft_status_success)
         return HIPFFT_INVALID_VALUE;
     return HIPFFT_SUCCESS;
+}
+catch(...)
+{
+    return handle_exception();
+}
+
+hipfftResult hipfftXtSetJITCallback(hipfftHandle         plan,
+                                    const char*          symbol_name,
+                                    const void*          bitcode_data,
+                                    size_t               bitcode_len_bytes,
+                                    hipfftXtCallbackType cbtype,
+                                    void**               cbdata)
+try
+{
+    if(!plan)
+        return HIPFFT_INVALID_PLAN;
+
+    switch(cbtype)
+    {
+    case HIPFFT_CB_LD_COMPLEX:
+    case HIPFFT_CB_LD_COMPLEX_DOUBLE:
+    case HIPFFT_CB_LD_REAL:
+    case HIPFFT_CB_LD_REAL_DOUBLE:
+    {
+        plan->load_callback_symbol      = symbol_name;
+        plan->load_callback_bitcode     = bitcode_data;
+        plan->load_callback_bitcode_len = bitcode_len_bytes;
+        plan->load_callback_data        = cbdata;
+        break;
+    }
+    case HIPFFT_CB_ST_COMPLEX:
+    case HIPFFT_CB_ST_COMPLEX_DOUBLE:
+    case HIPFFT_CB_ST_REAL:
+    case HIPFFT_CB_ST_REAL_DOUBLE:
+    {
+        plan->store_callback_symbol      = symbol_name;
+        plan->store_callback_bitcode     = bitcode_data;
+        plan->store_callback_bitcode_len = bitcode_len_bytes;
+        plan->store_callback_data        = cbdata;
+        break;
+    }
+    case HIPFFT_CB_UNDEFINED:
+        return HIPFFT_INVALID_VALUE;
+    }
 }
 catch(...)
 {
