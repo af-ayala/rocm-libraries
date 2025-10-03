@@ -71,7 +71,7 @@ struct LoadOps
 
     bool has_spirv() const
     {
-        return !spirv_cb.enabled();
+        return spirv_cb.enabled();
     }
 
     std::string forward_decls() const
@@ -166,9 +166,7 @@ struct StoreOps
 
     bool has_spirv() const
     {
-        // don't cache kernels with spir-v callbacks, to prevent
-        // confusing kernels from two plans that differ only by callbacks
-        return !spirv_cb.enabled();
+        return spirv_cb.enabled();
     }
 
     std::string forward_decls() const
