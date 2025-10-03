@@ -801,7 +801,7 @@ hipfftResult hipfftXtSetJITCallback(hipfftHandle         plan,
 try
 {
     return cufftResultToHipResult(
-        cufftXtSetJitCallback(plan,
+        cufftXtSetJITCallback(plan,
                               symbol_name,
                               bitcode_data,
                               bitcode_len_bytes,
