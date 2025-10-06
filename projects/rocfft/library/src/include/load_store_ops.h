@@ -37,7 +37,7 @@ struct rocfft_spirv_cb_t
     void set(const char* _symbol_name,
              void*       _bitcode_data,
              size_t      _bitcode_len_bytes,
-             void*       _cb_data)
+             void**      _cb_data)
     {
         symbol_name       = _symbol_name;
         bitcode_data      = _bitcode_data;
@@ -53,7 +53,7 @@ struct rocfft_spirv_cb_t
     const char* symbol_name       = nullptr;
     void*       bitcode_data      = nullptr;
     size_t      bitcode_len_bytes = 0;
-    void*       cb_data           = nullptr;
+    void**      cb_data           = nullptr;
 };
 
 struct LoadOps

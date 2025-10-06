@@ -147,7 +147,7 @@ int main()
         throw std::runtime_error("failed to create plan description");
 
     if(rocfft_plan_description_set_load_callback(
-           desc, "load_callback", code.data(), code.size(), cbdata_dev, 0)
+           desc, "load_callback", code.data(), code.size(), &cbdata_dev, 0)
        != rocfft_status_success)
         throw std::runtime_error("failed to set load callback");
 

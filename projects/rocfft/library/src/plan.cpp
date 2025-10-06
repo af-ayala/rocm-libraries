@@ -771,7 +771,7 @@ rocfft_status rocfft_plan_description_set_load_callback(rocfft_plan_description 
                                                         const char*             symbol_name,
                                                         void*                   bitcode_data,
                                                         size_t                  bitcode_len_bytes,
-                                                        void*                   cb_data,
+                                                        void**                  cb_data,
                                                         size_t                  shared_mem_bytes)
 try
 {
@@ -816,7 +816,7 @@ rocfft_status rocfft_plan_description_set_store_callback(rocfft_plan_description
                                                          const char*             symbol_name,
                                                          void*                   bitcode_data,
                                                          size_t                  bitcode_len_bytes,
-                                                         void*                   cb_data,
+                                                         void**                  cb_data,
                                                          size_t                  shared_mem_bytes)
 try
 {

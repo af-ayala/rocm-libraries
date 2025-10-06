@@ -370,6 +370,14 @@ ROCFFT_EXPORT rocfft_status rocfft_plan_description_set_comm(rocfft_plan_descrip
  *  underscores, and digits (0-9).  Additionally, they may not begin
  *  with digits.
  *
+ *  'cb_datas' is an array of pointers of data that is passed to the
+ *  callback function, one per brick in the input field of the
+ *  transform.  The pointers are in the same order as the bricks were
+ *  added to the input field, and callbacks executed on each brick
+ *  will be passed the corresponding pointer as its `cbdata`
+ *  parameter.  'cb_datas' may be nullptr, which means all callbacks
+ *  will be passed nullptr for `cbdata` when they are executed.
+ *
  *  Currently, 'shared_mem_bytes' must be 0.  Callbacks are not
  *  supported on transforms that use planar formats for either input
  *  or output.
@@ -387,7 +395,7 @@ ROCFFT_EXPORT rocfft_status
                                               const char*             symbol_name,
                                               void*                   bitcode_data,
                                               size_t                  bitcode_len_bytes,
-                                              void*                   cb_data,
+                                              void**                  cb_data,
                                               size_t                  shared_mem_bytes);
 
 /*! @brief Set a SPIR-V store callback function on a plan description.
@@ -415,6 +423,14 @@ ROCFFT_EXPORT rocfft_status
  *  underscores, and digits (0-9).  Additionally, they may not begin
  *  with digits.
  *
+ *  'cb_datas' is an array of pointers of data that is passed to the
+ *  callback function, one per brick in the output field of the
+ *  transform.  The pointers are in the same order as the bricks were
+ *  added to the output field, and callbacks executed on each brick
+ *  will be passed the corresponding pointer as its `cbdata`
+ *  parameter.  'cb_datas' may be nullptr, which means all callbacks
+ *  will be passed nullptr for `cbdata` when they are executed.
+ *
  *  Currently, 'shared_mem_bytes' must be 0.  Callbacks are not
  *  supported on transforms that use planar formats for either input
  *  or output.
@@ -432,7 +448,7 @@ ROCFFT_EXPORT rocfft_status
                                                const char*             symbol_name,
                                                void*                   bitcode_data,
                                                size_t                  bitcode_len_bytes,
-                                               void*                   cb_data,
+                                               void**                  cb_data,
                                                size_t                  shared_mem_bytes);
 
 /*! @brief Define a brick as part of a decomposition of a field.
