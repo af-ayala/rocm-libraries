@@ -40,6 +40,12 @@ struct load_cbdata
 
 const char* callback_src{
     R"_CALLBACK_SRC_(
+struct load_cbdata
+{
+    double2* filter;
+    double   scale;
+};
+
 extern "C"
 __device__ double2 load_callback(double2* input, size_t offset, void* cbdata, void* sharedMem)
 {
