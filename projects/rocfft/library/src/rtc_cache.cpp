@@ -601,7 +601,7 @@ std::vector<char> RTCCache::cached_compile(const std::string&          kernel_na
                 try
                 {
                     compile_promise.set_value(cached_compile_impl(
-                        kernel_name, gpu_arch, generate_src, generator_sum, cacheable, has_spirv));
+                        kernel_name, gpu_arch, generate_src, generator_sum, has_spirv));
                 }
                 catch(std::exception e)
                 {

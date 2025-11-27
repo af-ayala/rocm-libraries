@@ -126,18 +126,6 @@ int main()
     }
     std::cout << std::endl;
 
-    // Create the plan
-    hipfftHandle plan{};
-    hipfftResult hipfft_rt = hipfftCreate(&plan);
-    if(hipfft_rt != HIPFFT_SUCCESS)
-        throw std::runtime_error("failed to create plan");
-    hipfft_rt = hipfftPlan1d(&plan, // plan handle
-                             Nx, // transform length
-                             HIPFFT_Z2Z, // transform type (HIPFFT_C2C for single-precision)
-                             1); // number of transforms
-    if(hipfft_rt != HIPFFT_SUCCESS)
-        throw std::runtime_error("hipfftPlan1d failed");
-
     // prepare callback
     load_cbdata cbdata_host;
     cbdata_host.filter = filter_dev;
@@ -153,7 +141,7 @@ int main()
     auto code = compile_callback();
 
     // Allocate a plan
-    hipfftHandle plan      = hipfft_params::INVALID_PLAN_HANDLE;
+    hipfftHandle plan{};
     hipfftResult hipfft_rt = hipfftCreate(&plan);
     if(hipfft_rt != HIPFFT_SUCCESS)
         throw std::runtime_error("failed to create plan");

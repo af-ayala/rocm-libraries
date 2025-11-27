@@ -164,12 +164,14 @@ std::shared_future<std::unique_ptr<RTCKernel>>
             }
             try
             {
-                bool has_spirv = node.loadOps.has_spirv() || node.storeOps.has_spirv();
+                bool has_spirv = (node.loadOps && node.loadOps->has_spirv())
+                                 || (node.storeOps && node.storeOps->has_spirv());
 
                 std::vector<char> code = RTCCache::cached_compile(kernel_name,
                                                                   has_spirv ? ARCH_SPIRV : gpu_arch,
                                                                   generator.generate_src,
-                                                                  generator_sum());
+                                                                  generator_sum(),
+                                                                  has_spirv);
 
                 // If this is SPIR-V, link it together with the
                 // user-specified callbacks to produce a launchable
@@ -177,20 +179,18 @@ std::shared_future<std::unique_ptr<RTCKernel>>
                 if(has_spirv)
                 {
                     hipLink_wrapper_t linker;
-                    if(node.loadOps.has_spirv())
-                        linker.link(const_cast<void*>(node.loadOps.spirv_cb.bitcode_data),
-                                    node.loadOps.spirv_cb.bitcode_len_bytes,
+                    if(node.loadOps && node.loadOps->has_spirv())
+                        linker.link(const_cast<void*>(node.loadOps->spirv_cb.bitcode_data),
+                                    node.loadOps->spirv_cb.bitcode_len_bytes,
                                     "loadcb.spv");
-                    if(node.storeOps.has_spirv())
-                        linker.link(const_cast<void*>(node.storeOps.spirv_cb.bitcode_data),
-                                    node.storeOps.spirv_cb.bitcode_len_bytes,
+                    if(node.storeOps && node.storeOps->has_spirv())
+                        linker.link(const_cast<void*>(node.storeOps->spirv_cb.bitcode_data),
+                                    node.storeOps->spirv_cb.bitcode_len_bytes,
                                     "storecb.spv");
                     linker.link(code.data(), code.size(), (kernel_name + ".spv").c_str());
                     code = linker.complete();
                 }
 
-                std::vector<char> code = RTCCache::cached_compile(
-                    kernel_name, gpu_arch, generator.generate_src, generator_sum(), has_spirv);
                 compile_promise.set_value(generator.construct_rtckernel(
                     kernel_name, code, generator.gridDim, generator.blockDim));
             }
