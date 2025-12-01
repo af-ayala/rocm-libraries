@@ -89,6 +89,7 @@ set( rocfft-test_source
   validate_length_stride.cpp
   random.cpp
   ../../shared/array_validator.cpp
+  ../../shared/data_gen_device.cpp
   )
 
 add_executable( rocfft-test ${rocfft-test_source} ${rocfft-test_includes} )
