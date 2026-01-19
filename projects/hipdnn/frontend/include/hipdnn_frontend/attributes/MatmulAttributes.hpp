@@ -83,47 +83,17 @@ public:
             builder, get_a()->get_uid(), get_b()->get_uid(), get_c()->get_uid());
     }
 
-private:
-    std::shared_ptr<TensorAttributes> getInput(InputNames name) const
+    static MatmulAttributes fromFlatBuffer(
+        const hipdnn_data_sdk::data_objects::MatmulAttributes* fb,
+        const std::unordered_map<int64_t, std::shared_ptr<TensorAttributes>>& tensorMap)
     {
-        auto it = inputs.find(name);
-        if(it != inputs.end())
-        {
-            return it->second;
-        }
-        return nullptr;
-    }
+        MatmulAttributes attr;
 
-    std::shared_ptr<TensorAttributes> getOutput(OutputNames name) const
-    {
-        auto it = outputs.find(name);
-        if(it != outputs.end())
-        {
-            return it->second;
-        }
-        return nullptr;
-    }
+        attr.set_a(tensorMap.at(fb->a_tensor_uid()));
+        attr.set_b(tensorMap.at(fb->b_tensor_uid()));
+        attr.set_c(tensorMap.at(fb->c_tensor_uid()));
 
-    MatmulAttributes& setInput(InputNames name, const std::shared_ptr<TensorAttributes>& value)
-    {
-        inputs[name] = value;
-        return *this;
-    }
-    MatmulAttributes& setInput(InputNames name, std::shared_ptr<TensorAttributes>&& value)
-    {
-        inputs[name] = std::move(value);
-        return *this;
-    }
-
-    MatmulAttributes& setOutput(OutputNames name, const std::shared_ptr<TensorAttributes>& value)
-    {
-        outputs[name] = value;
-        return *this;
-    }
-    MatmulAttributes& setOutput(OutputNames name, std::shared_ptr<TensorAttributes>&& value)
-    {
-        outputs[name] = std::move(value);
-        return *this;
+        return attr;
     }
 };
 

@@ -1,4 +1,4 @@
-// Copyright (C) 2016 - 2023 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (C) 2016 - 2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <functional>
 #include <gtest/gtest.h>
 #include <mutex>
 #include <regex>
@@ -50,19 +51,8 @@ namespace std
     namespace filesystem = experimental::filesystem;
 }
 #endif
-namespace fs = std::filesystem;
 
-#ifdef HAVE_SCOPE_EXIT
-#if __has_include(<scope>)
-#include <scope>
-namespace scope = std;
-#else
-#include <experimental/scope>
-namespace scope = std::experimental;
-#endif
-#else
-#include <boost/scope_exit.hpp>
-#endif
+namespace fs = std::filesystem;
 
 #ifndef WIN32
 // get program_invocation_name
@@ -216,6 +206,20 @@ TEST(rocfft_UnitTest, plan_description_reuse)
     ASSERT_EQ(rocfft_plan_description_destroy(desc), rocfft_status_success);
 }
 
+struct LocalCleanup
+{
+    LocalCleanup(std::function<void()> f)
+        : f(f)
+    {
+    }
+    ~LocalCleanup()
+    {
+        f();
+    }
+
+    std::function<void()> f;
+};
+
 // run a transform with all log levels enabled
 TEST(rocfft_UnitTest, log_levels)
 {
@@ -226,20 +230,11 @@ TEST(rocfft_UnitTest, log_levels)
     }
 
     // clean up environment and temporary file when we exit
-#ifdef HAVE_SCOPE_EXIT
-    scope::scope_exit guard([=]()
-#else
-    BOOST_SCOPE_EXIT_ALL(=)
-#endif
-                            {
-                                rocfft_cleanup();
-                                // re-init logs with default logging
-                                rocfft_setup();
-                            }
-#ifdef HAVE_SCOPE_EXIT
-    )
-#endif
-        ;
+    LocalCleanup cleanup([]() {
+        rocfft_cleanup();
+        // re-init logs with default logging
+        rocfft_setup();
+    });
     rocfft_cleanup();
 
     // enumerate all known log levels and direct all of the logs to nowhere
@@ -247,7 +242,7 @@ TEST(rocfft_UnitTest, log_levels)
 #ifdef WIN32
     static const char* log_output = "NUL";
 #else
-    static const char* log_output = "/dev/null";
+    static const char* log_output   = "/dev/null";
 #endif
     EnvironmentSetTemp log_trace_path("ROCFFT_LOG_TRACE_PATH", log_output);
     EnvironmentSetTemp log_bench_path("ROCFFT_LOG_BENCH_PATH", log_output);
@@ -315,22 +310,12 @@ TEST(rocfft_UnitTest, log_multithreading)
     static const char* TRACE_FILE           = "trace.log";
 
     // clean up environment and temporary file when we exit
-#ifdef HAVE_SCOPE_EXIT
-    scope::scope_exit guard([=]()
-#else
-    BOOST_SCOPE_EXIT_ALL(=)
-#endif
-
-                            {
-                                rocfft_cleanup();
-                                remove(TRACE_FILE);
-                                // re-init logs with default logging
-                                rocfft_setup();
-                            }
-#ifdef HAVE_SCOPE_EXIT
-    )
-#endif
-        ;
+    LocalCleanup cleanup([=]() {
+        rocfft_cleanup();
+        remove(TRACE_FILE);
+        // re-init logs with default logging
+        rocfft_setup();
+    });
 
     // ask for trace logging, since that's the easiest to trigger
     rocfft_cleanup();
@@ -518,27 +503,18 @@ void rtc_cache_main()
     size_t onekernel_cache_bytes = 0;
 
     // cleanup
-#ifdef HAVE_SCOPE_EXIT
-    scope::scope_exit guard([=]()
-#else
-    BOOST_SCOPE_EXIT_ALL(=)
-#endif
-                            {
-                                // close log file handles
-                                rocfft_cleanup();
-                                remove(rtc_cache_path.c_str());
-                                remove(rtc_log_path.c_str());
-                                // re-init lib now that the env vars are gone
-                                rocfft_setup();
-                                if(empty_cache)
-                                    rocfft_cache_buffer_free(empty_cache);
-                                if(onekernel_cache)
-                                    rocfft_cache_buffer_free(onekernel_cache);
-                            }
-#ifdef HAVE_SCOPE_EXIT
-    )
-#endif
-        ;
+    LocalCleanup cleanup([=]() {
+        // close log file handles
+        rocfft_cleanup();
+        remove(rtc_cache_path.c_str());
+        remove(rtc_log_path.c_str());
+        // re-init lib now that the env vars are gone
+        rocfft_setup();
+        if(empty_cache)
+            rocfft_cache_buffer_free(empty_cache);
+        if(onekernel_cache)
+            rocfft_cache_buffer_free(onekernel_cache);
+    });
 
     rocfft_cleanup();
     EnvironmentSetTemp cache_env("ROCFFT_RTC_CACHE_PATH", rtc_cache_path.c_str());
@@ -656,6 +632,7 @@ void rtc_cache_main()
     rocfft_cleanup();
     ASSERT_TRUE(fft_kernel_was_compiled());
 }
+
 // run the main body of rtc cache tests twice to uncover potential
 // problems with thread reuse between iterations
 TEST(rocfft_UnitTest, rtc_cache_iter_1)
@@ -780,20 +757,11 @@ TEST(rocfft_UnitTest, rtc_test_harness)
 
     rocfft_cleanup();
 
-#ifdef HAVE_SCOPE_EXIT
-    scope::scope_exit guard([]()
-#else
-    BOOST_SCOPE_EXIT_ALL()
-#endif
-                            {
-                                // reinit rocFFT so caching goes back to normal
-                                rocfft_cleanup();
-                                rocfft_setup();
-                            }
-#ifdef HAVE_SCOPE_EXIT
-    )
-#endif
-        ;
+    LocalCleanup cleanup([]() {
+        // reinit rocFFT so caching goes back to normal
+        rocfft_cleanup();
+        rocfft_setup();
+    });
 
     // extra scope to control lifetime of env vars
     {
@@ -892,10 +860,10 @@ TEST(rocfft_UnitTest, rtc_test_harness)
         for(i = 0; i < files.size(); ++i)
         {
 #ifdef WIN32
-            const std::string command = "amdclang++ -x hip -c -std=c++17 -o NUL " + files[i].first;
+            const std::string command = "amdclang++ -x hip -c -std=c++20 -o NUL " + files[i].first;
 #else
             const std::string command
-                = "amdclang++ -x hip -c -std=c++17 -o /dev/null " + files[i].first;
+                = "amdclang++ -x hip -c -std=c++20 -o /dev/null " + files[i].first;
 #endif
             files[i].second = std::system(command.c_str());
         }
