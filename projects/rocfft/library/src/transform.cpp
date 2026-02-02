@@ -483,15 +483,19 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
 
     if(workBufSize > 0)
     {
-        auto requiredWorkBufBytes = WorkBufBytes(real_type_size(rootPlan->precision));
         exec_info->workBuffers.resize(location.device + 1);
-        if(!exec_info->workBuffers[location.device])
+        auto& workBuffer = exec_info->workBuffers[location.device];
+
+        auto requiredWorkBufBytes = WorkBufBytes(real_type_size(rootPlan->precision));
+        // if no work buffer provided, or we allocated it and it's
+        // too small, allocate a right-sized buffer
+        if(!workBuffer || (workBuffer.is_owned() && workBuffer.size() < requiredWorkBufBytes))
         {
-            if(exec_info->workBuffers[location.device].alloc(requiredWorkBufBytes) != hipSuccess)
+            if(workBuffer.alloc(requiredWorkBufBytes) != hipSuccess)
                 throw std::runtime_error("work buffer allocation failure");
         }
         // otherwise user provided a buffer, but complain if it's too small
-        else if(exec_info->workBuffers[location.device].size() < requiredWorkBufBytes)
+        else if(workBuffer.size() < requiredWorkBufBytes)
         {
             if(LOG_TRACE_ENABLED())
                 (*LogSingleton::GetInstance().GetTraceOS())

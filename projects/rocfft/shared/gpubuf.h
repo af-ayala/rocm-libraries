@@ -140,6 +140,11 @@ public:
         return buf;
     }
 
+    bool is_owned() const
+    {
+        return owned;
+    }
+
 private:
     // The GPU buffer
     void* buf = nullptr;
