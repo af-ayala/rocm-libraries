@@ -70,8 +70,13 @@ try
     log_trace(__func__, "info", info, "work_buffer", work_buffer, "size_in_bytes", size_in_bytes);
     if(!work_buffer)
         return rocfft_status_invalid_work_buffer;
-    info->workBufferSize = size_in_bytes;
-    info->workBuffer     = work_buffer;
+
+    // put this work buffer in the slot for the current HIP device
+    int deviceId = hipInvalidDeviceId;
+    if(hipGetDevice(&deviceId) != hipSuccess || deviceId < 0)
+        return rocfft_status_failure;
+    info->workBuffers.resize(deviceId + 1);
+    info->workBuffers[deviceId] = gpubuf::make_nonowned(work_buffer, size_in_bytes);
 
     return rocfft_status_success;
 }
@@ -432,14 +437,13 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
     rocfft_scoped_device dev(location.device);
 
     // tolerate user not providing an execution_info
-    rocfft_execution_info_t exec_info;
-    if(info)
-        exec_info = *info;
+    rocfft_execution_info_t  internal_exec_info;
+    rocfft_execution_info_t* exec_info = info ? info : &internal_exec_info;
 
     // use the local stream if user didn't provide one
-    if(mgpuPlan && !exec_info.rocfft_stream)
+    if(mgpuPlan && !exec_info->rocfft_stream)
     {
-        exec_info.rocfft_stream = this->stream;
+        exec_info->rocfft_stream = this->stream;
     }
 
     // TransformPowX below needs in_buffer, out_buffer to work with.
@@ -477,21 +481,17 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
     auto in_transform_ptrs  = mgpuPlan ? in_buffer_copy.data() : in_buffer;
     auto out_transform_ptrs = mgpuPlan ? out_buffer_copy.data() : out_buffer;
 
-    gpubuf autoAllocWorkBuf;
-
     if(workBufSize > 0)
     {
         auto requiredWorkBufBytes = WorkBufBytes(real_type_size(rootPlan->precision));
-        if(!exec_info.workBuffer)
+        exec_info->workBuffers.resize(location.device + 1);
+        if(!exec_info->workBuffers[location.device])
         {
-            // user didn't provide a buffer, alloc one now
-            if(autoAllocWorkBuf.alloc(requiredWorkBufBytes) != hipSuccess)
+            if(exec_info->workBuffers[location.device].alloc(requiredWorkBufBytes) != hipSuccess)
                 throw std::runtime_error("work buffer allocation failure");
-            exec_info.workBufferSize = requiredWorkBufBytes;
-            exec_info.workBuffer     = autoAllocWorkBuf.data();
         }
         // otherwise user provided a buffer, but complain if it's too small
-        else if(exec_info.workBufferSize < requiredWorkBufBytes)
+        else if(exec_info->workBuffers[location.device].size() < requiredWorkBufBytes)
         {
             if(LOG_TRACE_ENABLED())
                 (*LogSingleton::GetInstance().GetTraceOS())
@@ -502,7 +502,7 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
 
     // Callbacks do not currently support planar format
     if((array_type_is_planar(rootPlan->inArrayType) || array_type_is_planar(rootPlan->outArrayType))
-       && (exec_info.load_cb_fns || exec_info.store_cb_fns))
+       && (exec_info->load_cb_fns || exec_info->store_cb_fns))
         throw std::runtime_error("callbacks not supported with planar format");
 
     try
@@ -511,14 +511,14 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
                       in_transform_ptrs,
                       (rootPlan->placement == rocfft_placement_inplace) ? in_transform_ptrs
                                                                         : out_transform_ptrs,
-                      &exec_info,
+                      exec_info,
                       multiPlanIdx,
                       callbacks);
         // all work is enqueued to the stream, record the event on
         // the stream. Not needed for single-device plans.
         if(mgpuPlan)
         {
-            if(hipEventRecord(event, exec_info.rocfft_stream) != hipSuccess)
+            if(hipEventRecord(event, exec_info->rocfft_stream) != hipSuccess)
                 throw std::runtime_error("hipEventRecord failed");
         }
     }

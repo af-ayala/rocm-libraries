@@ -21,20 +21,17 @@
 #ifndef TRANSFORM_H
 #define TRANSFORM_H
 
+#include <vector>
+
+#include "../../../shared/gpubuf.h"
 #include "../../../shared/rocfft_hip.h"
 
 #include "callback_map.h"
 
 struct rocfft_execution_info_t
 {
-    void*       workBuffer;
-    size_t      workBufferSize;
     hipStream_t rocfft_stream = 0; // by default it is stream 0
-    rocfft_execution_info_t()
-        : workBuffer(nullptr)
-        , workBufferSize(0)
-    {
-    }
+    rocfft_execution_info_t() = default;
     // User-supplied load/store callback function pointers and data.
     // If specified, there is one function+data per brick in the
     // input/output.
@@ -44,6 +41,8 @@ struct rocfft_execution_info_t
     void** store_cb_fns       = nullptr;
     void** store_cb_data      = nullptr;
     size_t store_cb_lds_bytes = 0;
+
+    std::vector<gpubuf> workBuffers;
 };
 
 void TransformPowX(const ExecPlan&                         execPlan,
