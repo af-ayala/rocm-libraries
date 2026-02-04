@@ -31,7 +31,7 @@
 struct rocfft_execution_info_t
 {
     hipStream_t rocfft_stream = 0; // by default it is stream 0
-    rocfft_execution_info_t() = default;
+    rocfft_execution_info_t();
     // User-supplied load/store callback function pointers and data.
     // If specified, there is one function+data per brick in the
     // input/output.

@@ -34,6 +34,14 @@
 #include "rocfft_exception.h"
 #include "transform.h"
 
+rocfft_execution_info_t::rocfft_execution_info_t()
+{
+    int deviceCount = 0;
+    if(hipGetDeviceCount(&deviceCount) != hipSuccess)
+        throw std::runtime_error("failed to get device count");
+    workBuffers.resize(deviceCount);
+}
+
 rocfft_status rocfft_execution_info_create(rocfft_execution_info* info)
 try
 {
@@ -75,7 +83,6 @@ try
     int deviceId = hipInvalidDeviceId;
     if(hipGetDevice(&deviceId) != hipSuccess || deviceId < 0)
         return rocfft_status_failure;
-    info->workBuffers.resize(deviceId + 1);
     info->workBuffers[deviceId] = gpubuf::make_nonowned(work_buffer, size_in_bytes);
 
     return rocfft_status_success;
@@ -483,7 +490,6 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
 
     if(workBufSize > 0)
     {
-        exec_info->workBuffers.resize(location.device + 1);
         auto& workBuffer = exec_info->workBuffers[location.device];
 
         auto requiredWorkBufBytes = WorkBufBytes(real_type_size(rootPlan->precision));
