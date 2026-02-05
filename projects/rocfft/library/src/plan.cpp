@@ -1275,6 +1275,24 @@ void rocfft_plan_t::AllocateInternalTempBuffers()
     }
 }
 
+std::vector<size_t> rocfft_plan_t::PerDeviceTempBufferSizes()
+{
+    int deviceCount = 0;
+    if(hipGetDeviceCount(&deviceCount) != hipSuccess)
+        throw std::runtime_error("failed to get device count");
+
+    std::vector<size_t> ret(deviceCount);
+
+    for(auto& t : tempBuffers)
+    {
+        if(t.first.comm_rank != get_local_comm_rank())
+            continue;
+
+        ret[t.first.device] += t.second->get_size_bytes();
+    }
+    return ret;
+}
+
 // Given user-specified brick layout, return a vector of BufferPtrs
 // that point to those bricks.  Assign comm_rank and rank-specific
 // index on those BufferPtrs appropriately.  Constructor specifies
@@ -3519,7 +3537,7 @@ rocfft_status rocfft_plan_create_internal(rocfft_plan                   plan,
             }
         }
 
-        plan->AllocateInternalTempBuffers();
+        // plan->AllocateInternalTempBuffers();
         return rocfft_status_success;
     }
     catch(std::exception& e)

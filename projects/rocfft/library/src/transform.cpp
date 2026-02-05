@@ -83,7 +83,7 @@ try
     int deviceId = hipInvalidDeviceId;
     if(hipGetDevice(&deviceId) != hipSuccess || deviceId < 0)
         return rocfft_status_failure;
-    info->workBuffers[deviceId] = gpubuf::make_nonowned(work_buffer, size_in_bytes);
+    info->singleDeviceWorkBuffer = gpubuf::make_nonowned(work_buffer, size_in_bytes);
 
     return rocfft_status_success;
 }
@@ -488,26 +488,36 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
     auto in_transform_ptrs  = mgpuPlan ? in_buffer_copy.data() : in_buffer;
     auto out_transform_ptrs = mgpuPlan ? out_buffer_copy.data() : out_buffer;
 
-    if(workBufSize > 0)
-    {
-        auto& workBuffer = exec_info->workBuffers[location.device];
-
-        auto requiredWorkBufBytes = WorkBufBytes(real_type_size(rootPlan->precision));
+    auto ensureWorkbufferSize = [](gpubuf& buf, size_t requiredSize) {
         // if no work buffer provided, or we allocated it and it's
         // too small, allocate a right-sized buffer
-        if(!workBuffer || (workBuffer.is_owned() && workBuffer.size() < requiredWorkBufBytes))
+        if(!buf || (buf.is_owned() && buf.size() < requiredSize))
         {
-            if(workBuffer.alloc(requiredWorkBufBytes) != hipSuccess)
+            if(buf.alloc(requiredSize) != hipSuccess)
                 throw std::runtime_error("work buffer allocation failure");
         }
         // otherwise user provided a buffer, but complain if it's too small
-        else if(workBuffer.size() < requiredWorkBufBytes)
+        else if(buf.size() < requiredSize)
         {
             if(LOG_TRACE_ENABLED())
                 (*LogSingleton::GetInstance().GetTraceOS())
                     << "user work buffer too small" << std::endl;
             throw rocfft_status_invalid_work_buffer;
         }
+    };
+
+    if(workBufSize > 0)
+    {
+        auto& workBuffer           = exec_info->singleDeviceWorkBuffer;
+        auto  requiredWorkBufBytes = WorkBufBytes(real_type_size(rootPlan->precision));
+        ensureWorkbufferSize(workBuffer, requiredWorkBufBytes);
+    }
+
+    // allocate work buffers for multi-GPU transforms too
+    auto perDeviceTempBufferSizes = plan->PerDeviceTempBufferSizes();
+    for(size_t device = 0; device < perDeviceTempBufferSizes.size(); ++device)
+    {
+        ensureWorkbufferSize(exec_info->workBuffers[device], perDeviceTempBufferSizes[device]);
     }
 
     // Callbacks do not currently support planar format

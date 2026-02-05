@@ -43,6 +43,7 @@ struct rocfft_execution_info_t
     size_t store_cb_lds_bytes = 0;
 
     std::vector<gpubuf> workBuffers;
+    gpubuf              singleDeviceWorkBuffer;
 };
 
 void TransformPowX(const ExecPlan&                         execPlan,

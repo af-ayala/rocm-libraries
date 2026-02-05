@@ -302,6 +302,8 @@ struct rocfft_plan_t
                                                     const std::optional<StoreOps>& storeOps,
                                                     bool                           partOfMultiPlan);
 
+    std::vector<size_t> PerDeviceTempBufferSizes();
+
 private:
     // Multi-node or multi-GPU plan is built up from a vector of plan
     // items.  Items can launch kernels on a device, or move
