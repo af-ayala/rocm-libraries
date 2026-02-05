@@ -518,6 +518,7 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
     for(size_t device = 0; device < perDeviceTempBufferSizes.size(); ++device)
     {
         ensureWorkbufferSize(exec_info->workBuffers[device], perDeviceTempBufferSizes[device]);
+        plan->AssignMDTempBuffers(exec_info->workBuffers);
     }
 
     // Callbacks do not currently support planar format

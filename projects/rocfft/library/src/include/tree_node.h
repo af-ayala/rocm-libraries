@@ -859,7 +859,7 @@ public:
 
     void set_size_bytes(size_t in)
     {
-        if(buf)
+        if(ptr)
             throw std::runtime_error("cannot set internal buffer size after allocation");
         if(in > size_bytes)
             size_bytes = in;
@@ -870,16 +870,14 @@ public:
         return size_bytes;
     }
 
-    void alloc(int deviceID)
+    void set_data(void* p)
     {
-        rocfft_scoped_device device(deviceID);
-        if(buf.alloc(size_bytes) != hipSuccess)
-            throw std::runtime_error("internal temp buffer allocation failure");
+        ptr = p;
     }
 
     void* data()
     {
-        return buf.data();
+        return ptr;
     }
 
     int get_comm_rank() const
@@ -890,7 +888,7 @@ public:
 private:
     int    comm_rank  = 0;
     size_t size_bytes = 0;
-    gpubuf buf;
+    void*  ptr;
 };
 
 // Class representing a buffer in a multi-plan item.

@@ -288,10 +288,13 @@ struct rocfft_plan_t
     // don't cover the whole index space, or bricks overlap)
     void ValidateFields() const;
 
-    // During plan creation, InternalTempBuffer remembers how much
-    // space will be needed but doesn't allocate.  Allocate the buffers
-    // after the space requirements are finalized.
-    void AllocateInternalTempBuffers();
+    // Get the local communication rank
+    int get_local_comm_rank() const;
+    // Get number of ranks in the local communicator
+    int get_local_comm_size() const;
+
+    std::vector<size_t> PerDeviceTempBufferSizes() const;
+    void                AssignMDTempBuffers(const std::vector<gpubuf>& bufs);
 
     // Construct a single-device execPlan from the specified root plan
     // data.  It runs on the specified location.
@@ -301,8 +304,6 @@ struct rocfft_plan_t
                                                     const std::optional<LoadOps>&  loadOps,
                                                     const std::optional<StoreOps>& storeOps,
                                                     bool                           partOfMultiPlan);
-
-    std::vector<size_t> PerDeviceTempBufferSizes();
 
 private:
     // Multi-node or multi-GPU plan is built up from a vector of plan

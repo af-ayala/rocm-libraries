@@ -1260,22 +1260,7 @@ private:
     std::shared_ptr<InternalTempBuffer>                                    buf;
 };
 
-void rocfft_plan_t::AllocateInternalTempBuffers()
-{
-    for(auto& t : tempBuffers)
-    {
-        if(t.first.comm_rank != desc.get_local_comm_rank())
-            continue;
-
-        t.second->alloc(t.first.device);
-        if(LOG_PLAN_ENABLED())
-            *LogSingleton::GetInstance().GetPlanOS()
-                << "temp buffer " << t.second->data() << ", device " << t.first.device
-                << ", size_bytes " << t.second->get_size_bytes() << std::endl;
-    }
-}
-
-std::vector<size_t> rocfft_plan_t::PerDeviceTempBufferSizes()
+std::vector<size_t> rocfft_plan_t::PerDeviceTempBufferSizes() const
 {
     int deviceCount = 0;
     if(hipGetDeviceCount(&deviceCount) != hipSuccess)
@@ -1291,6 +1276,18 @@ std::vector<size_t> rocfft_plan_t::PerDeviceTempBufferSizes()
         ret[t.first.device] += t.second->get_size_bytes();
     }
     return ret;
+}
+
+void rocfft_plan_t::AssignMDTempBuffers(const std::vector<gpubuf>& bufs)
+{
+    std::vector<size_t> offsets(bufs.size(), 0UL);
+
+    for(auto& tempBuf : tempBuffers)
+    {
+        int device = tempBuf.first.device;
+        tempBuf.second->set_data(bufs[device].data_offset(offsets[device]));
+        offsets[device] += tempBuf.second->get_size_bytes();
+    }
 }
 
 // Given user-specified brick layout, return a vector of BufferPtrs
