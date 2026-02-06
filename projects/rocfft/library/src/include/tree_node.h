@@ -888,7 +888,7 @@ public:
 private:
     int    comm_rank  = 0;
     size_t size_bytes = 0;
-    void*  ptr;
+    void*  ptr        = nullptr;
 };
 
 // Class representing a buffer in a multi-plan item.
