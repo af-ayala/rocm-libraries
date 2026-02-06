@@ -318,7 +318,7 @@ void rocfft_plan_t::LogSortedPlan(const std::vector<size_t>& sortedIdx) const
     }
 }
 
-void rocfft_plan_t::Execute(void* in_buffer[], void* out_buffer[], rocfft_execution_info info)
+void rocfft_plan_t::Execute(void* in_buffer[], void* out_buffer[], rocfft_execution_info_t& info)
 {
     // Vector of topologically sorted indexes to the items in multiPlan
     auto sortedIdx = MultiPlanTopologicalSort();
@@ -403,6 +403,25 @@ void rocfft_plan_t::Execute(void* in_buffer[], void* out_buffer[], rocfft_execut
     }
 }
 
+static void EnsureWorkBufferSize(gpubuf& buf, size_t requiredSize)
+{
+    // if no work buffer provided, or we allocated it and it's
+    // too small, allocate a right-sized buffer
+    if(!buf || (buf.is_owned() && buf.size() < requiredSize))
+    {
+        if(buf.alloc(requiredSize) != hipSuccess)
+            throw std::runtime_error("work buffer allocation failure");
+    }
+    // otherwise user provided a buffer, but complain if it's too small
+    else if(buf.size() < requiredSize)
+    {
+        if(LOG_TRACE_ENABLED())
+            (*LogSingleton::GetInstance().GetTraceOS())
+                << "user work buffer too small" << std::endl;
+        throw rocfft_status_invalid_work_buffer;
+    }
+}
+
 rocfft_status rocfft_execute(const rocfft_plan     plan,
                              void*                 in_buffer[],
                              void*                 out_buffer[],
@@ -417,7 +436,18 @@ try
 
     try
     {
-        plan->Execute(in_buffer, out_buffer, info);
+        // tolerate user not providing an execution_info
+        rocfft_execution_info_t  internal_exec_info;
+        rocfft_execution_info_t& exec_info = info ? *info : internal_exec_info;
+
+        // allocate work buffers for multi-GPU transforms too
+        auto perDeviceTempBufferSizes = plan->PerDeviceTempBufferSizes();
+        for(size_t device = 0; device < perDeviceTempBufferSizes.size(); ++device)
+        {
+            EnsureWorkBufferSize(exec_info.workBuffers[device], perDeviceTempBufferSizes[device]);
+        }
+
+        plan->Execute(in_buffer, out_buffer, exec_info);
     }
     catch(std::exception& e)
     {
@@ -437,20 +467,16 @@ catch(...)
 void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
                             void*                                   in_buffer[],
                             void*                                   out_buffer[],
-                            rocfft_execution_info                   info,
+                            rocfft_execution_info_t&                info,
                             size_t                                  multiPlanIdx,
                             const std::map<int, device_callback_t>& callbacks)
 {
     rocfft_scoped_device dev(location.device);
 
-    // tolerate user not providing an execution_info
-    rocfft_execution_info_t  internal_exec_info;
-    rocfft_execution_info_t* exec_info = info ? info : &internal_exec_info;
-
     // use the local stream if user didn't provide one
-    if(mgpuPlan && !exec_info->rocfft_stream)
+    if(mgpuPlan && !info.rocfft_stream)
     {
-        exec_info->rocfft_stream = this->stream;
+        info.rocfft_stream = this->stream;
     }
 
     // TransformPowX below needs in_buffer, out_buffer to work with.
@@ -488,42 +514,16 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
     auto in_transform_ptrs  = mgpuPlan ? in_buffer_copy.data() : in_buffer;
     auto out_transform_ptrs = mgpuPlan ? out_buffer_copy.data() : out_buffer;
 
-    auto ensureWorkbufferSize = [](gpubuf& buf, size_t requiredSize) {
-        // if no work buffer provided, or we allocated it and it's
-        // too small, allocate a right-sized buffer
-        if(!buf || (buf.is_owned() && buf.size() < requiredSize))
-        {
-            if(buf.alloc(requiredSize) != hipSuccess)
-                throw std::runtime_error("work buffer allocation failure");
-        }
-        // otherwise user provided a buffer, but complain if it's too small
-        else if(buf.size() < requiredSize)
-        {
-            if(LOG_TRACE_ENABLED())
-                (*LogSingleton::GetInstance().GetTraceOS())
-                    << "user work buffer too small" << std::endl;
-            throw rocfft_status_invalid_work_buffer;
-        }
-    };
-
     if(workBufSize > 0)
     {
-        auto& workBuffer           = exec_info->singleDeviceWorkBuffer;
+        auto& workBuffer           = info.singleDeviceWorkBuffer;
         auto  requiredWorkBufBytes = WorkBufBytes(real_type_size(rootPlan->precision));
-        ensureWorkbufferSize(workBuffer, requiredWorkBufBytes);
-    }
-
-    // allocate work buffers for multi-GPU transforms too
-    auto perDeviceTempBufferSizes = plan->PerDeviceTempBufferSizes();
-    for(size_t device = 0; device < perDeviceTempBufferSizes.size(); ++device)
-    {
-        ensureWorkbufferSize(exec_info->workBuffers[device], perDeviceTempBufferSizes[device]);
-        plan->AssignMDTempBuffers(exec_info->workBuffers);
+        EnsureWorkBufferSize(workBuffer, requiredWorkBufBytes);
     }
 
     // Callbacks do not currently support planar format
     if((array_type_is_planar(rootPlan->inArrayType) || array_type_is_planar(rootPlan->outArrayType))
-       && (exec_info->load_cb_fns || exec_info->store_cb_fns))
+       && (info.load_cb_fns || info.store_cb_fns))
         throw std::runtime_error("callbacks not supported with planar format");
 
     try
@@ -532,14 +532,14 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
                       in_transform_ptrs,
                       (rootPlan->placement == rocfft_placement_inplace) ? in_transform_ptrs
                                                                         : out_transform_ptrs,
-                      exec_info,
+                      info,
                       multiPlanIdx,
                       callbacks);
         // all work is enqueued to the stream, record the event on
         // the stream. Not needed for single-device plans.
         if(mgpuPlan)
         {
-            if(hipEventRecord(event, exec_info->rocfft_stream) != hipSuccess)
+            if(hipEventRecord(event, info.rocfft_stream) != hipSuccess)
                 throw std::runtime_error("hipEventRecord failed");
         }
     }

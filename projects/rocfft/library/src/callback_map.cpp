@@ -22,14 +22,10 @@
 #include "plan.h"
 #include "transform.h"
 
-std::map<int, device_callback_t> DeviceCallbackMap(const rocfft_execution_info_t*   info,
+std::map<int, device_callback_t> DeviceCallbackMap(const rocfft_execution_info_t&   info,
                                                    const rocfft_plan_description_t& desc,
                                                    int                              local_comm_rank)
 {
-    // tolerate user not providing an execution_info
-    const rocfft_execution_info_t  internal_exec_info;
-    const rocfft_execution_info_t* exec_info = info ? info : &internal_exec_info;
-
     int local_device = 0;
     if(hipGetDevice(&local_device) != hipSuccess)
         throw std::runtime_error("failed to get device");
@@ -93,32 +89,31 @@ std::map<int, device_callback_t> DeviceCallbackMap(const rocfft_execution_info_t
     if(desc.inFields.empty())
     {
         // we have at most one load callback
-        if(exec_info->load_cb_fns)
+        if(info.load_cb_fns)
         {
-            callbacks[local_device].load_fn = exec_info->load_cb_fns[0];
-            if(exec_info->load_cb_data)
-                callbacks[local_device].load_data = exec_info->load_cb_data[0];
+            callbacks[local_device].load_fn = info.load_cb_fns[0];
+            if(info.load_cb_data)
+                callbacks[local_device].load_data = info.load_cb_data[0];
         }
     }
     else
     {
-        set_field_callback(desc.inFields, exec_info->load_cb_fns, exec_info->load_cb_data, true);
+        set_field_callback(desc.inFields, info.load_cb_fns, info.load_cb_data, true);
     }
 
     if(desc.outFields.empty())
     {
         // we have at most one store callback
-        if(exec_info->store_cb_fns)
+        if(info.store_cb_fns)
         {
-            callbacks[local_device].store_fn = exec_info->store_cb_fns[0];
-            if(exec_info->store_cb_data)
-                callbacks[local_device].store_data = exec_info->store_cb_data[0];
+            callbacks[local_device].store_fn = info.store_cb_fns[0];
+            if(info.store_cb_data)
+                callbacks[local_device].store_data = info.store_cb_data[0];
         }
     }
     else
     {
-        set_field_callback(
-            desc.outFields, exec_info->store_cb_fns, exec_info->store_cb_data, false);
+        set_field_callback(desc.outFields, info.store_cb_fns, info.store_cb_data, false);
     }
 
     return callbacks;

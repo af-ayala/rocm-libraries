@@ -528,7 +528,7 @@ void SetDefaultCallback(const TreeNode* node, const SetCallbackType& type, void*
 void TransformPowX(const ExecPlan&                         execPlan,
                    void*                                   in_buffer[],
                    void*                                   out_buffer[],
-                   rocfft_execution_info                   info,
+                   rocfft_execution_info_t&                info,
                    size_t                                  multiPlanIdx,
                    const std::map<int, device_callback_t>& callbacks)
 {
@@ -538,7 +538,7 @@ void TransformPowX(const ExecPlan&                         execPlan,
     auto tuningPacket      = TuningBenchmarker::GetSingleton().GetPacket();
     // we can log profile information if we're on the null stream,
     // since we will be able to wait for the transform to finish
-    bool emit_profile_log  = (processing_tuning || LOG_PROFILE_ENABLED()) && !info->rocfft_stream;
+    bool emit_profile_log  = (processing_tuning || LOG_PROFILE_ENABLED()) && !info.rocfft_stream;
     bool emit_kernelio_log = LOG_KERNELIO_ENABLED();
 
     rocfft_ostream*    kernelio_stream = nullptr;
@@ -564,23 +564,23 @@ void TransformPowX(const ExecPlan&                         execPlan,
         {
             load_node->callbacks.load_cb_fn        = it->second.load_fn;
             load_node->callbacks.load_cb_data      = it->second.load_data;
-            load_node->callbacks.load_cb_lds_bytes = info->load_cb_lds_bytes;
+            load_node->callbacks.load_cb_lds_bytes = info.load_cb_lds_bytes;
         }
 
         if(execPlan.rootPlan->storeOps)
         {
             store_node->callbacks.store_cb_fn        = it->second.store_fn;
             store_node->callbacks.store_cb_data      = it->second.store_data;
-            store_node->callbacks.store_cb_lds_bytes = info->store_cb_lds_bytes;
+            store_node->callbacks.store_cb_lds_bytes = info.store_cb_lds_bytes;
         }
     }
 
-    char* workBuffer = static_cast<char*>(info->workBuffers[execPlan.location.device].data());
+    char* workBuffer = static_cast<char*>(info.workBuffers[execPlan.location.device].data());
     for(size_t i = 0; i < execPlan.execSeq.size(); i++)
     {
         DeviceCallIn data;
         data.node          = execPlan.execSeq[i];
-        data.rocfft_stream = (info == nullptr) ? 0 : info->rocfft_stream;
+        data.rocfft_stream = info.rocfft_stream;
         data.deviceProp    = execPlan.deviceProp;
 
         // Size of complex type

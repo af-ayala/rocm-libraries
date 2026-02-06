@@ -43,7 +43,7 @@ struct device_callback_t
 // might not be in any sensible order.
 struct rocfft_execution_info_t;
 struct rocfft_plan_description_t;
-std::map<int, device_callback_t> DeviceCallbackMap(const rocfft_execution_info_t*   info,
+std::map<int, device_callback_t> DeviceCallbackMap(const rocfft_execution_info_t&   info,
                                                    const rocfft_plan_description_t& desc,
                                                    int local_comm_rank);
 #endif

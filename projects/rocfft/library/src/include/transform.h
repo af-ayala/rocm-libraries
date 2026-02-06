@@ -49,7 +49,7 @@ struct rocfft_execution_info_t
 void TransformPowX(const ExecPlan&                         execPlan,
                    void*                                   in_buffer[],
                    void*                                   out_buffer[],
-                   rocfft_execution_info                   info,
+                   rocfft_execution_info_t&                info,
                    size_t                                  multiPlanIdx,
                    const std::map<int, device_callback_t>& callbacks);
 
