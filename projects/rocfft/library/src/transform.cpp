@@ -446,6 +446,7 @@ try
         {
             EnsureWorkBufferSize(exec_info.workBuffers[device], perDeviceTempBufferSizes[device]);
         }
+        plan->AssignMDTempBuffers(exec_info.workBuffers);
 
         plan->Execute(in_buffer, out_buffer, exec_info);
     }
