@@ -474,6 +474,7 @@ try
         auto perDeviceTempBufferSizes = plan->PerDeviceTempBufferSizes();
         for(size_t device = 0; device < perDeviceTempBufferSizes.size(); ++device)
         {
+            rocfft_scoped_device dev(device);
             EnsureWorkBufferSize(exec_info.workBuffers[device], perDeviceTempBufferSizes[device]);
         }
         plan->AssignMDTempBuffers(exec_info.workBuffers);
