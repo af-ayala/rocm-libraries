@@ -30,7 +30,9 @@
 
 struct rocfft_execution_info_t
 {
-    hipStream_t rocfft_stream = 0; // by default it is stream 0
+    // non-owned HIP stream optionally provided by user.  by default it
+    // is the null stream
+    hipStream_t rocfft_stream = 0;
     rocfft_execution_info_t();
     // User-supplied load/store callback function pointers and data.
     // If specified, there is one function+data per brick in the
@@ -44,12 +46,20 @@ struct rocfft_execution_info_t
 
     std::vector<gpubuf> workBuffers;
     gpubuf              singleDeviceWorkBuffer;
+
+    // not copyable, as gpubufs/streams are not copyable
+    rocfft_execution_info_t(const rocfft_execution_info_t&) = delete;
+    rocfft_execution_info_t& operator=(const rocfft_execution_info_t&) = delete;
+
+    // initialize this object, taking non-owning pointers from a
+    // user-provided execution info
+    void init_nonowning(const rocfft_execution_info_t& other);
 };
 
 void TransformPowX(const ExecPlan&                         execPlan,
                    void*                                   in_buffer[],
                    void*                                   out_buffer[],
-                   rocfft_execution_info_t&                info,
+                   const rocfft_execution_info_t&          info,
                    size_t                                  multiPlanIdx,
                    const std::map<int, device_callback_t>& callbacks);
 

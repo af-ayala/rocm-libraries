@@ -42,6 +42,26 @@ rocfft_execution_info_t::rocfft_execution_info_t()
     workBuffers.resize(deviceCount);
 }
 
+void rocfft_execution_info_t::init_nonowning(const rocfft_execution_info_t& other)
+{
+    rocfft_stream      = other.rocfft_stream;
+    load_cb_fns        = other.load_cb_fns;
+    load_cb_data       = other.load_cb_data;
+    load_cb_lds_bytes  = other.load_cb_lds_bytes;
+    store_cb_fns       = other.store_cb_fns;
+    store_cb_data      = other.store_cb_data;
+    store_cb_lds_bytes = other.store_cb_lds_bytes;
+
+    workBuffers.resize(other.workBuffers.size());
+    for(size_t i = 0; i < workBuffers.size(); ++i)
+    {
+        workBuffers[i]
+            = gpubuf::make_nonowned(other.workBuffers[i].data(), other.workBuffers[i].size());
+    }
+    singleDeviceWorkBuffer = gpubuf::make_nonowned(other.singleDeviceWorkBuffer.data(),
+                                                   other.singleDeviceWorkBuffer.size());
+}
+
 rocfft_status rocfft_execution_info_create(rocfft_execution_info* info)
 try
 {
@@ -425,11 +445,18 @@ static void EnsureWorkBufferSize(gpubuf& buf, size_t requiredSize)
 rocfft_status rocfft_execute(const rocfft_plan     plan,
                              void*                 in_buffer[],
                              void*                 out_buffer[],
-                             rocfft_execution_info info)
+                             rocfft_execution_info user_exec_info)
 try
 {
-    log_trace(
-        __func__, "plan", plan, "in_buffer", in_buffer, "out_buffer", out_buffer, "info", info);
+    log_trace(__func__,
+              "plan",
+              plan,
+              "in_buffer",
+              in_buffer,
+              "out_buffer",
+              out_buffer,
+              "info",
+              user_exec_info);
 
     if(!plan)
         return rocfft_status_failure;
@@ -437,8 +464,9 @@ try
     try
     {
         // tolerate user not providing an execution_info
-        rocfft_execution_info_t  internal_exec_info;
-        rocfft_execution_info_t& exec_info = info ? *info : internal_exec_info;
+        rocfft_execution_info_t exec_info;
+        if(user_exec_info)
+            exec_info.init_nonowning(*user_exec_info);
 
         // allocate work buffers for multi-GPU transforms too
         auto perDeviceTempBufferSizes = plan->PerDeviceTempBufferSizes();
