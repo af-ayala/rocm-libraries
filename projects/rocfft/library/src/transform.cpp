@@ -338,7 +338,9 @@ void rocfft_plan_t::LogSortedPlan(const std::vector<size_t>& sortedIdx) const
     }
 }
 
-void rocfft_plan_t::Execute(void* in_buffer[], void* out_buffer[], rocfft_execution_info_t& info)
+void rocfft_plan_t::Execute(void*                          in_buffer[],
+                            void*                          out_buffer[],
+                            const rocfft_execution_info_t& info)
 {
     // Vector of topologically sorted indexes to the items in multiPlan
     auto sortedIdx = MultiPlanTopologicalSort();
@@ -496,11 +498,14 @@ catch(...)
 void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
                             void*                                   in_buffer[],
                             void*                                   out_buffer[],
-                            rocfft_execution_info_t&                info,
+                            const rocfft_execution_info_t&          info_const,
                             size_t                                  multiPlanIdx,
                             const std::map<int, device_callback_t>& callbacks)
 {
     rocfft_scoped_device dev(location.device);
+
+    rocfft_execution_info_t info;
+    info.init_nonowning(info_const);
 
     // use the local stream if user didn't provide one
     if(mgpuPlan && !info.rocfft_stream)

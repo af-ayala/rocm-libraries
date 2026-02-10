@@ -259,7 +259,7 @@ struct rocfft_plan_t
     void AddAntecedent(size_t itemIdx, size_t antecedentIdx);
 
     // Execute the multi-GPU plan.
-    void Execute(void* in_buffer[], void* out_buffer[], rocfft_execution_info_t& info);
+    void Execute(void* in_buffer[], void* out_buffer[], const rocfft_execution_info_t& info);
 
     size_t WorkBufBytes() const;
 
