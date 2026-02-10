@@ -444,6 +444,41 @@ static void EnsureWorkBufferSize(gpubuf& buf, size_t requiredSize)
     }
 }
 
+static void AssignMDTempBuffers(const rocfft_plan plan, rocfft_execution_info_t& info)
+{
+    int deviceCount = 0;
+    if(hipGetDeviceCount(&deviceCount) != hipSuccess)
+        throw std::runtime_error("failed to get device count");
+
+    std::vector<size_t> perDeviceSizes(deviceCount);
+
+    auto tempBuffers = plan->GetTempBuffers();
+    for(auto& t : tempBuffers)
+    {
+        if(t->get_location().comm_rank != plan->get_local_comm_rank())
+            continue;
+
+        perDeviceSizes[t->get_location().device] += t->get_size_bytes();
+    }
+
+    // now ensure that each of the work buffers is big enough
+    for(size_t device = 0; device < perDeviceSizes.size(); ++device)
+    {
+        rocfft_scoped_device dev(device);
+        EnsureWorkBufferSize(info.workBuffers[device], perDeviceSizes[device]);
+    }
+
+    // go back through the temp buffers and assign concrete pointers for each of them
+    std::vector<size_t> offsets(deviceCount, 0UL);
+
+    for(auto& tempBuf : tempBuffers)
+    {
+        int device = tempBuf->get_location().device;
+        info.tempBufferPtrs.emplace(tempBuf, info.workBuffers[device].data_offset(offsets[device]));
+        offsets[device] += tempBuf->get_size_bytes();
+    }
+}
+
 rocfft_status rocfft_execute(const rocfft_plan     plan,
                              void*                 in_buffer[],
                              void*                 out_buffer[],
@@ -471,13 +506,7 @@ try
             exec_info.init_nonowning(*user_exec_info);
 
         // allocate work buffers for multi-GPU transforms too
-        auto perDeviceTempBufferSizes = plan->PerDeviceTempBufferSizes();
-        for(size_t device = 0; device < perDeviceTempBufferSizes.size(); ++device)
-        {
-            rocfft_scoped_device dev(device);
-            EnsureWorkBufferSize(exec_info.workBuffers[device], perDeviceTempBufferSizes[device]);
-        }
-        plan->AssignMDTempBuffers(exec_info.workBuffers);
+        AssignMDTempBuffers(plan, exec_info);
 
         plan->Execute(in_buffer, out_buffer, exec_info);
     }
@@ -531,7 +560,7 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
 
         // if input/output are overridden, override now
         if(inputPtr)
-            in_buffer_copy[0] = inputPtr.get(in_buffer, out_buffer, local_comm_rank);
+            in_buffer_copy[0] = inputPtr.get(in_buffer, out_buffer, local_comm_rank, info);
 
         if(rootPlan->placement == rocfft_placement_notinplace)
         {
@@ -540,7 +569,7 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
                             plan->desc.outFields, plan->desc.outArrayType, local_comm_rank),
                         std::back_inserter(out_buffer_copy));
             if(outputPtr)
-                out_buffer_copy[0] = outputPtr.get(in_buffer, out_buffer, local_comm_rank);
+                out_buffer_copy[0] = outputPtr.get(in_buffer, out_buffer, local_comm_rank, info);
         }
     }
 

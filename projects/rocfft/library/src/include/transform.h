@@ -28,6 +28,8 @@
 
 #include "callback_map.h"
 
+class InternalTempBuffer;
+
 struct rocfft_execution_info_t
 {
     // non-owned HIP stream optionally provided by user.  by default it
@@ -54,6 +56,10 @@ struct rocfft_execution_info_t
     // initialize this object, taking non-owning pointers from a
     // user-provided execution info
     void init_nonowning(const rocfft_execution_info_t& other);
+
+    // map InternalTempBuffers from a plan to actual pointers - this
+    // map is set during rocfft_execute and is not set by users
+    std::map<InternalTempBuffer*, void*> tempBufferPtrs;
 };
 
 void TransformPowX(const ExecPlan&                         execPlan,

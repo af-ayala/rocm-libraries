@@ -1205,7 +1205,7 @@ struct TempBufferLease
         {
             // instead allocate a placeholder that remembers which
             // rank this was for, to aid debugging
-            buf = std::make_shared<InternalTempBuffer>(location.comm_rank);
+            buf = std::make_shared<InternalTempBuffer>(location);
             return;
         }
 
@@ -1223,7 +1223,7 @@ struct TempBufferLease
             return;
         }
         // no buffer was found, allocate a new one
-        buf = std::make_shared<InternalTempBuffer>(local_comm_rank);
+        buf = std::make_shared<InternalTempBuffer>(location);
         buf->set_size_bytes(alloc_size);
     }
     ~TempBufferLease()
@@ -1260,34 +1260,14 @@ private:
     std::shared_ptr<InternalTempBuffer>                                    buf;
 };
 
-std::vector<size_t> rocfft_plan_t::PerDeviceTempBufferSizes() const
+std::vector<InternalTempBuffer*> rocfft_plan_t::GetTempBuffers() const
 {
-    int deviceCount = 0;
-    if(hipGetDeviceCount(&deviceCount) != hipSuccess)
-        throw std::runtime_error("failed to get device count");
+    std::vector<InternalTempBuffer*> bufs;
+    bufs.reserve(tempBuffers.size());
 
-    std::vector<size_t> ret(deviceCount);
-
-    for(auto& t : tempBuffers)
-    {
-        if(t.first.comm_rank != get_local_comm_rank())
-            continue;
-
-        ret[t.first.device] += t.second->get_size_bytes();
-    }
-    return ret;
-}
-
-void rocfft_plan_t::AssignMDTempBuffers(const std::vector<gpubuf>& bufs)
-{
-    std::vector<size_t> offsets(bufs.size(), 0UL);
-
-    for(auto& tempBuf : tempBuffers)
-    {
-        int device = tempBuf.first.device;
-        tempBuf.second->set_data(bufs[device].data_offset(offsets[device]));
-        offsets[device] += tempBuf.second->get_size_bytes();
-    }
+    for(const auto& t : tempBuffers)
+        bufs.push_back(t.second.get());
+    return bufs;
 }
 
 // Given user-specified brick layout, return a vector of BufferPtrs

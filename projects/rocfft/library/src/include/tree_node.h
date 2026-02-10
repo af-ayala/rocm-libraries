@@ -849,8 +849,8 @@ struct rocfft_location_t
 class InternalTempBuffer
 {
 public:
-    InternalTempBuffer(int comm_rank)
-        : comm_rank(comm_rank)
+    InternalTempBuffer(rocfft_location_t _location)
+        : location(_location)
     {
     }
     InternalTempBuffer(const InternalTempBuffer&) = delete;
@@ -870,25 +870,15 @@ public:
         return size_bytes;
     }
 
-    void set_data(void* p)
+    const rocfft_location_t& get_location() const
     {
-        ptr = p;
-    }
-
-    void* data()
-    {
-        return ptr;
-    }
-
-    int get_comm_rank() const
-    {
-        return comm_rank;
+        return location;
     }
 
 private:
-    int    comm_rank  = 0;
-    size_t size_bytes = 0;
-    void*  ptr        = nullptr;
+    rocfft_location_t location;
+    size_t            size_bytes = 0;
+    void*             ptr        = nullptr;
 };
 
 // Class representing a buffer in a multi-plan item.
@@ -938,29 +928,17 @@ public:
         BufferPtr ret;
         ret.type      = PTR_TEMP;
         ret.temp_ptr  = ptr;
-        ret.comm_rank = ptr->get_comm_rank();
+        ret.comm_rank = ptr->get_location().comm_rank;
         return ret;
     }
 
     // Get a pointer to the buffer.  The buffer might be an
     // user-provided input or output buffer that's only known at
     // execute time.
-    void* get(void* in_buffer[], void* out_buffer[], int local_comm_rank) const
-    {
-        if(comm_rank != local_comm_rank)
-            return nullptr;
-        switch(type)
-        {
-        case PTR_NULL:
-            throw std::runtime_error("fetching null item pointer");
-        case PTR_USER_IN:
-            return in_buffer[idx];
-        case PTR_USER_OUT:
-            return out_buffer[idx];
-        case PTR_TEMP:
-            return temp_ptr->data();
-        }
-    }
+    void* get(void*                          in_buffer[],
+              void*                          out_buffer[],
+              int                            local_comm_rank,
+              const rocfft_execution_info_t& info) const;
 
     std::string str() const
     {
@@ -983,11 +961,7 @@ public:
         case PTR_TEMP:
         {
             std::stringstream ss;
-            ss << "temp buffer on rank " << comm_rank << " ";
-            if(temp_ptr)
-                ss << temp_ptr->data();
-            else
-                ss << "(null)";
+            ss << "temp buffer on rank " << comm_rank;
             return ss.str();
         }
         }

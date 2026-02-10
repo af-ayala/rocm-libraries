@@ -293,8 +293,7 @@ struct rocfft_plan_t
     // Get number of ranks in the local communicator
     int get_local_comm_size() const;
 
-    std::vector<size_t> PerDeviceTempBufferSizes() const;
-    void                AssignMDTempBuffers(const std::vector<gpubuf>& bufs);
+    std::vector<InternalTempBuffer*> GetTempBuffers() const;
 
     // Construct a single-device execPlan from the specified root plan
     // data.  It runs on the specified location.

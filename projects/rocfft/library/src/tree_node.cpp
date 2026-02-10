@@ -26,6 +26,7 @@
 #include "plan.h"
 #include "repo.h"
 #include "rocfft_mpi.h"
+#include "transform.h"
 #include "twiddles.h"
 
 #include <limits>
@@ -494,6 +495,26 @@ bool TreeNode::IsBluesteinChirpSetup()
     throw std::runtime_error("unexpected bluestein plan shape");
 }
 
+void* BufferPtr::get(void*                          in_buffer[],
+                     void*                          out_buffer[],
+                     int                            local_comm_rank,
+                     const rocfft_execution_info_t& info) const
+{
+    if(comm_rank != local_comm_rank)
+        return nullptr;
+    switch(type)
+    {
+    case PTR_NULL:
+        throw std::runtime_error("fetching null item pointer");
+    case PTR_USER_IN:
+        return in_buffer[idx];
+    case PTR_USER_OUT:
+        return out_buffer[idx];
+    case PTR_TEMP:
+        return info.tempBufferPtrs.find(temp_ptr.get())->second;
+    }
+}
+
 MultiPlanItem::MultiPlanItem() {}
 
 MultiPlanItem::~MultiPlanItem() {}
@@ -559,9 +580,11 @@ void CommPointToPoint::ExecuteAsync(const rocfft_plan              plan,
     }
 
     auto srcWithOffset = ptr_offset(
-        srcPtr.get(in_buffer, out_buffer, local_comm_rank), srcOffset, precision, arrayType);
-    auto destWithOffset = ptr_offset(
-        destPtr.get(in_buffer, out_buffer, local_comm_rank), destOffset, precision, arrayType);
+        srcPtr.get(in_buffer, out_buffer, local_comm_rank, info), srcOffset, precision, arrayType);
+    auto destWithOffset = ptr_offset(destPtr.get(in_buffer, out_buffer, local_comm_rank, info),
+                                     destOffset,
+                                     precision,
+                                     arrayType);
 
     if(srcLocation.comm_rank == destLocation.comm_rank)
     {
@@ -676,12 +699,15 @@ void CommScatter::ExecuteAsync(const rocfft_plan              plan,
     {
         const auto& op = ops[opIdx];
 
-        auto srcWithOffset = ptr_offset(
-            srcPtr.get(in_buffer, out_buffer, local_comm_rank), op.srcOffset, precision, arrayType);
-        auto destWithOffset = ptr_offset(op.destPtr.get(in_buffer, out_buffer, local_comm_rank),
-                                         op.destOffset,
-                                         precision,
-                                         arrayType);
+        auto srcWithOffset = ptr_offset(srcPtr.get(in_buffer, out_buffer, local_comm_rank, info),
+                                        op.srcOffset,
+                                        precision,
+                                        arrayType);
+        auto destWithOffset
+            = ptr_offset(op.destPtr.get(in_buffer, out_buffer, local_comm_rank, info),
+                         op.destOffset,
+                         precision,
+                         arrayType);
 
         hipError_t err = hipSuccess;
         if(op.destLocation.comm_rank == srcLocation.comm_rank)
@@ -807,11 +833,11 @@ void CommGather::ExecuteAsync(const rocfft_plan              plan,
 
         rocfft_scoped_device dev(op.srcLocation.device);
 
-        auto srcWithOffset  = ptr_offset(op.srcPtr.get(in_buffer, out_buffer, local_comm_rank),
+        auto srcWithOffset = ptr_offset(op.srcPtr.get(in_buffer, out_buffer, local_comm_rank, info),
                                         op.srcOffset,
                                         precision,
                                         arrayType);
-        auto destWithOffset = ptr_offset(destPtr.get(in_buffer, out_buffer, local_comm_rank),
+        auto destWithOffset = ptr_offset(destPtr.get(in_buffer, out_buffer, local_comm_rank, info),
                                          op.destOffset,
                                          precision,
                                          arrayType);
@@ -957,10 +983,10 @@ void CommAllToAll::ExecuteAsync(const rocfft_plan              plan,
 
         const int send_count = static_cast<int>(send_count_elems);
 
-        const auto mpiret = MPI_Ialltoall(sendBuf.get(in_buffer, out_buffer, local_comm_rank),
+        const auto mpiret = MPI_Ialltoall(sendBuf.get(in_buffer, out_buffer, local_comm_rank, info),
                                           send_count,
                                           elem_type,
-                                          recvBuf.get(in_buffer, out_buffer, local_comm_rank),
+                                          recvBuf.get(in_buffer, out_buffer, local_comm_rank, info),
                                           send_count,
                                           elem_type,
                                           mpi_comm,
@@ -1015,16 +1041,17 @@ void CommAllToAll::ExecuteAsync(const rocfft_plan              plan,
             return;
         }
 
-        const auto mpiret = MPI_Ialltoallv(sendBuf.get(in_buffer, out_buffer, local_comm_rank),
-                                           intSendCounts.data(),
-                                           intSendOffsets.data(),
-                                           elem_type,
-                                           recvBuf.get(in_buffer, out_buffer, local_comm_rank),
-                                           intRecvCounts.data(),
-                                           intRecvOffsets.data(),
-                                           elem_type,
-                                           mpi_comm,
-                                           &request);
+        const auto mpiret
+            = MPI_Ialltoallv(sendBuf.get(in_buffer, out_buffer, local_comm_rank, info),
+                             intSendCounts.data(),
+                             intSendOffsets.data(),
+                             elem_type,
+                             recvBuf.get(in_buffer, out_buffer, local_comm_rank, info),
+                             intRecvCounts.data(),
+                             intRecvOffsets.data(),
+                             elem_type,
+                             mpi_comm,
+                             &request);
 
         if(mpiret != MPI_SUCCESS)
         {
