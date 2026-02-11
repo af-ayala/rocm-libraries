@@ -60,6 +60,8 @@ void rocfft_execution_info_t::init_nonowning(const rocfft_execution_info_t& othe
     }
     singleDeviceWorkBuffer = gpubuf::make_nonowned(other.singleDeviceWorkBuffer.data(),
                                                    other.singleDeviceWorkBuffer.size());
+
+    tempBufferPtrs = other.tempBufferPtrs;
 }
 
 rocfft_status rocfft_execution_info_create(rocfft_execution_info* info)
