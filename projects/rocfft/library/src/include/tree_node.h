@@ -961,7 +961,8 @@ public:
         case PTR_TEMP:
         {
             std::stringstream ss;
-            ss << "temp buffer on rank " << comm_rank;
+            ss << "temp buffer " << temp_ptr.get() << " size " << temp_ptr->get_size_bytes()
+               << " on rank " << comm_rank;
             return ss.str();
         }
         }
