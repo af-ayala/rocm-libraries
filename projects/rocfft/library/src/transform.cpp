@@ -427,11 +427,11 @@ void rocfft_plan_t::Execute(void*                          in_buffer[],
     }
 }
 
-static void EnsureWorkBufferSize(gpubuf& buf, size_t requiredSize)
+static void EnsureWorkBufferSize(gpubuf& buf, int device, size_t requiredSize)
 {
     // if no work buffer provided, or we allocated it and it's
-    // too small, allocate a right-sized buffer
-    if(!buf || (buf.is_owned() && buf.size() < requiredSize))
+    // too small, or it's the wrong device, allocate a right-sized buffer
+    if(!buf || (buf.is_owned() && buf.size() < requiredSize) || device != buf.get_device())
     {
         if(buf.alloc(requiredSize) != hipSuccess)
             throw std::runtime_error("work buffer allocation failure");
@@ -467,7 +467,7 @@ static void AssignMDTempBuffers(const rocfft_plan plan, rocfft_execution_info_t&
     for(size_t device = 0; device < perDeviceSizes.size(); ++device)
     {
         rocfft_scoped_device dev(device);
-        EnsureWorkBufferSize(info.workBuffers[device], perDeviceSizes[device]);
+        EnsureWorkBufferSize(info.workBuffers[device], device, perDeviceSizes[device]);
     }
 
     // go back through the temp buffers and assign concrete pointers for each of them
@@ -584,7 +584,7 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
     {
         auto& workBuffer           = info.singleDeviceWorkBuffer;
         auto  requiredWorkBufBytes = WorkBufBytes(real_type_size(rootPlan->precision));
-        EnsureWorkBufferSize(workBuffer, requiredWorkBufBytes);
+        EnsureWorkBufferSize(workBuffer, location.device, requiredWorkBufBytes);
     }
 
     // Callbacks do not currently support planar format

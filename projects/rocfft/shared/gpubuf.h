@@ -145,6 +145,11 @@ public:
         return owned;
     }
 
+    int get_device() const
+    {
+        return device;
+    }
+
 private:
     // The GPU buffer
     void* buf = nullptr;
