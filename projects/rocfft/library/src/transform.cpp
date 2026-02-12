@@ -433,6 +433,7 @@ static void EnsureWorkBufferSize(gpubuf& buf, int device, size_t requiredSize)
     // too small, or it's the wrong device, allocate a right-sized buffer
     if(!buf || (buf.is_owned() && buf.size() < requiredSize) || device != buf.get_device())
     {
+        buf.free();
         if(buf.alloc(requiredSize) != hipSuccess)
             throw std::runtime_error("work buffer allocation failure");
     }
