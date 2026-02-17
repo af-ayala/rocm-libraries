@@ -1496,6 +1496,7 @@ struct ExecPlan : public MultiPlanItem
     // are pointers to those temp buffers.
     BufferPtr inputPtr;
     BufferPtr outputPtr;
+    BufferPtr workPtr;
 
     void ExecuteAsync(const rocfft_plan                       plan,
                       void*                                   in_buffer[],

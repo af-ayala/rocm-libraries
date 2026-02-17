@@ -575,7 +575,8 @@ void TransformPowX(const ExecPlan&                         execPlan,
         }
     }
 
-    char* workBuffer = static_cast<char*>(info.singleDeviceWorkBuffer.data());
+    char* workBuffer = static_cast<char*>(
+        execPlan.workPtr.get(in_buffer, out_buffer, execPlan.location.comm_rank, info));
     for(size_t i = 0; i < execPlan.execSeq.size(); i++)
     {
         DeviceCallIn data;

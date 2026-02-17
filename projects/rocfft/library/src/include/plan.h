@@ -288,11 +288,6 @@ struct rocfft_plan_t
     // don't cover the whole index space, or bricks overlap)
     void ValidateFields() const;
 
-    // Get the local communication rank
-    int get_local_comm_rank() const;
-    // Get number of ranks in the local communicator
-    int get_local_comm_size() const;
-
     std::vector<InternalTempBuffer*> GetTempBuffers() const;
 
     // Construct a single-device execPlan from the specified root plan

@@ -58,8 +58,6 @@ void rocfft_execution_info_t::init_nonowning(const rocfft_execution_info_t& othe
         workBuffers[i]
             = gpubuf::make_nonowned(other.workBuffers[i].data(), other.workBuffers[i].size());
     }
-    singleDeviceWorkBuffer = gpubuf::make_nonowned(other.singleDeviceWorkBuffer.data(),
-                                                   other.singleDeviceWorkBuffer.size());
 
     tempBufferPtrs = other.tempBufferPtrs;
 }
@@ -105,7 +103,6 @@ try
     int deviceId = hipInvalidDeviceId;
     if(hipGetDevice(&deviceId) != hipSuccess || deviceId < 0)
         return rocfft_status_failure;
-    info->singleDeviceWorkBuffer = gpubuf::make_nonowned(work_buffer, size_in_bytes);
 
     return rocfft_status_success;
 }
@@ -458,7 +455,7 @@ static void AssignMDTempBuffers(const rocfft_plan plan, rocfft_execution_info_t&
     auto tempBuffers = plan->GetTempBuffers();
     for(auto& t : tempBuffers)
     {
-        if(t->get_location().comm_rank != plan->get_local_comm_rank())
+        if(t->get_location().comm_rank != plan->desc.get_local_comm_rank())
             continue;
 
         perDeviceSizes[t->get_location().device] += t->get_size_bytes();
@@ -580,13 +577,6 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
     // we have a single or multi device plan.
     auto in_transform_ptrs  = mgpuPlan ? in_buffer_copy.data() : in_buffer;
     auto out_transform_ptrs = mgpuPlan ? out_buffer_copy.data() : out_buffer;
-
-    if(workBufSize > 0)
-    {
-        auto& workBuffer           = info.singleDeviceWorkBuffer;
-        auto  requiredWorkBufBytes = WorkBufBytes(real_type_size(rootPlan->precision));
-        EnsureWorkBufferSize(workBuffer, location.device, requiredWorkBufBytes);
-    }
 
     // Callbacks do not currently support planar format
     if((array_type_is_planar(rootPlan->inArrayType) || array_type_is_planar(rootPlan->outArrayType))

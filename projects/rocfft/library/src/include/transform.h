@@ -47,7 +47,6 @@ struct rocfft_execution_info_t
     size_t store_cb_lds_bytes = 0;
 
     std::vector<gpubuf> workBuffers;
-    gpubuf              singleDeviceWorkBuffer;
 
     // not copyable, as gpubufs/streams are not copyable
     rocfft_execution_info_t(const rocfft_execution_info_t&) = delete;

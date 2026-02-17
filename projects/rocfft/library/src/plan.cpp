@@ -1854,6 +1854,11 @@ std::unique_ptr<ExecPlan>
                 throw std::runtime_error("Unable to get the solution info.");
         }
 
+        // We have the plan, set work memory requirements
+        auto workMemBytes = execPlanMultiItem->WorkBufBytes(real_type_size(rootPlanData.precision));
+        TempBufferLease workMemLease{tempBuffers, local_comm_rank, location, workMemBytes, 1};
+        execPlanMultiItem->workPtr = BufferPtr::temp(workMemLease.data());
+
         return execPlanMultiItem;
     }
     catch(std::exception&)
