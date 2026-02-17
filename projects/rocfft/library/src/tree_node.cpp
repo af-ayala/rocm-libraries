@@ -1133,6 +1133,8 @@ void ExecPlan::Print(rocfft_ostream& os, const int indent) const
         os << indentStr << "  inputPtr: " << inputPtr.str() << std::endl;
     if(outputPtr)
         os << indentStr << "  outputPtr: " << outputPtr.str() << std::endl;
+    if(workPtr)
+        os << indentStr << "  workPtr: " << workPtr.str() << std::endl;
 
     PrintNode(os, *this, indent);
 }
