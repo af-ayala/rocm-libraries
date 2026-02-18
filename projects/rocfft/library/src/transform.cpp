@@ -426,6 +426,9 @@ void rocfft_plan_t::Execute(void*                          in_buffer[],
 
 static void EnsureWorkBufferSize(gpubuf& buf, int device, size_t requiredSize)
 {
+    if(requiredSize == 0)
+        return;
+
     // if no work buffer provided, or we allocated it and it's
     // too small, or it's the wrong device, allocate a right-sized buffer
     if(!buf || (buf.is_owned() && buf.size() < requiredSize) || device != buf.get_device())
