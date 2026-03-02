@@ -133,22 +133,22 @@ RTCKernelArgs RTCKernelTranspose::get_launch_args(DeviceCallIn& data)
 
     auto num_lengths = data.node->length.size();
     kargs.append_unsigned_int(num_lengths);
-    kargs.append_unsigned_int(data.node->length[0]);
-    kargs.append_unsigned_int(data.node->length[1]);
-    kargs.append_unsigned_int(num_lengths > 2 ? data.node->length[2] : 1);
+    kargs.append_size_t(data.node->length[0]);
+    kargs.append_size_t(data.node->length[1]);
+    kargs.append_size_t(num_lengths > 2 ? data.node->length[2] : 1);
     kargs.append_ptr(kargs_lengths(data.node->devKernArg));
 
-    kargs.append_unsigned_int(data.node->inStride[0]);
-    kargs.append_unsigned_int(data.node->inStride[1]);
-    kargs.append_unsigned_int(num_lengths > 2 ? data.node->inStride[2] : 0);
+    kargs.append_size_t(data.node->inStride[0]);
+    kargs.append_size_t(data.node->inStride[1]);
+    kargs.append_size_t(num_lengths > 2 ? data.node->inStride[2] : 0);
     kargs.append_ptr(kargs_stride_in(data.node->devKernArg));
-    kargs.append_unsigned_int(data.node->iDist);
+    kargs.append_size_t(data.node->iDist);
 
-    kargs.append_unsigned_int(data.node->outStride[0]);
-    kargs.append_unsigned_int(data.node->outStride[1]);
-    kargs.append_unsigned_int(num_lengths > 2 ? data.node->outStride[2] : 0);
+    kargs.append_size_t(data.node->outStride[0]);
+    kargs.append_size_t(data.node->outStride[1]);
+    kargs.append_size_t(num_lengths > 2 ? data.node->outStride[2] : 0);
     kargs.append_ptr(kargs_stride_out(data.node->devKernArg));
-    kargs.append_unsigned_int(data.node->oDist);
+    kargs.append_size_t(data.node->oDist);
 
     // pass gridX, gridY and gridZ to restore a 3-D GPU grid, if needed for large grids
     unsigned int tileX = data.node->precision == rocfft_precision_single ? 64 : 32;
