@@ -70,7 +70,7 @@ void rocfft_execution_info_internal::ensure_work_buffer_size(
             {
                 if(buf.size() >= size_bytes)
                 {
-                    return;
+                    continue;
                 }
                 else
                 {
