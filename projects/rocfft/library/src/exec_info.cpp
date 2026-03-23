@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 #include "exec_info.h"
+#include "../../shared/rocfft_hip.h"
 #include "logging.h"
 
 rocfft_execution_info_t::rocfft_execution_info_t()
@@ -84,6 +85,7 @@ void rocfft_execution_info_internal::ensure_work_buffer_size(
         }
 
         // no user work buffer was specified, allocate one
+        rocfft_scoped_device dev(device);
         if(execWorkBuffers[device].alloc(size_bytes) != hipSuccess)
             throw std::runtime_error("work buffer allocation failure");
     }
