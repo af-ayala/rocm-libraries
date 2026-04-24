@@ -44,7 +44,7 @@ if __name__ == '__main__':
                         metavar='file',
                         type=str,
                         nargs='+',
-                        required=True,
+                        default=[],
                         help='additional files that make up generator logic')
     parser.add_argument('--output',
                         metavar='file',

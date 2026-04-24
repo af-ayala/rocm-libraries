@@ -48,6 +48,7 @@ std::vector<char> compile_inprocess(const std::string& kernel_src, const std::st
     std::string gpu_arch_arg = "--offload-arch=" + gpu_arch;
 
     std::vector<const char*> options;
+    // spirv doesn't require
     options.push_back("-O3");
     options.push_back("-std=c++20");
     options.push_back(gpu_arch_arg.c_str());
@@ -73,7 +74,7 @@ std::vector<char> compile_inprocess(const std::string& kernel_src, const std::st
 
     size_t            codeSize;
     std::vector<char> code;
-    // SPIR-V is returned as bitcode, not finished code
+    // SPIR-V is returned as bitcode, not a finished code object
     if(gpu_arch == ARCH_SPIRV)
     {
         if(hiprtcGetBitcodeSize(state.prog, &codeSize) != HIPRTC_SUCCESS)
