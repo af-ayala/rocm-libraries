@@ -25,6 +25,7 @@ The following table lists all operations currently supported in the CPU Referenc
 | Convolution Backward Data | FP16, BFP16, FP32 | NCHW, NHWC, NCDHW, NDHWC | CPU Reference |  |
 | Convolution Forward | FP16, BFP16, FP32 | NCHW, NHWC, NCDHW, NDHWC | CPU Reference |  |
 | Convolution Backward Weights | FP16, BFP16, FP32 | NCHW, NHWC, NCDHW, NDHWC | CPU Reference |  |
+| Matmul | FP16, BFP16, FP32 | NCHW, NCDHW | CPU Reference |  |
 | Pointwise Unary | FP16, BFP16, FP32 | All | CPU Reference |  |
 | Pointwise Binary | FP16, BFP16, FP32 | All | CPU Reference |  |
 
@@ -47,6 +48,12 @@ The following table lists all operations currently supported in the CPU Referenc
 | Convolution Backward Data | `ConvolutionBwdPlanBuilder` | `ConvolutionBwdSignatureKey` | Data gradient computation |
 | Convolution Backward Weights | `ConvolutionWrwPlanBuilder` | `ConvolutionWrwSignatureKey` | Weight gradient computation |
 
+### Matmul Operations
+
+| Operation | Plan Builder | Signature Key | Description |
+|-----------|-------------|---------------|-------------|
+| Matmul | `MatmulPlanBuilder` | `MatmulSignatureKey` | Generic matrix multiplication |
+
 ### Pointwise Operations
 
 | Operation Type | Plan Builder | Signature Key | Supported Operations |
@@ -68,15 +75,21 @@ The following table lists all operations currently supported in the CPU Referenc
 - **NCDHW**: Batch, Channels, Depth, Height, Width (3D, channel-first)
 - **NDHWC**: Batch, Depth, Height, Width, Channels (3D, channel-last)
 
+> **Note:** The layout names (NCHW, NHWC, etc.) describe the **memory layout** controlled by
+> strides. Dimension ordering is operation-specific: convolution and batch normalization use
+> `(N, C, H, W)` / `(N, C, D, H, W)` ordering, matmul uses `(...batch, M, K)` ordering,
+> and pointwise operations are dimension-agnostic. See the
+> [Porting Guide](./PortingGuide.md#tensor-dimensions-and-layouts) for details.
+
 ### Implementation
 - **CPU Reference**: CPU-based reference implementation for validation
 
 ## Extension Guidelines
 
-For detailed information on adding new operations or datatypes to the CPU Reference Implementation, please refer to the [Extension Guidelines](./CpuGraphExecutorDesign.md#extension-guidelines) section in the CPU Graph Executor Design document.
+For detailed information on adding new operations or datatypes to the CPU Reference Implementation, please refer to the [Extension Guidelines](./rfcs/0001_CpuGraphExecutorDesign.md#extension-guidelines) section in the CPU Graph Executor Design document.
 
 ## Related Documentation
 
 - [hipDNN Operation Support](./OperationSupport.md) - Central hub for hipDNN operation support
-- [CPU Graph Executor Design](./CpuGraphExecutorDesign.md) - Detailed architecture documentation
+- [CPU Graph Executor Design](./rfcs/0001_CpuGraphExecutorDesign.md) - Detailed architecture documentation
 - [Testing Plan](./testing/TestPlan.md) - Testing strategy and procedures

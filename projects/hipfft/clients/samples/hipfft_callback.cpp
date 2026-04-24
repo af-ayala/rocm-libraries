@@ -86,6 +86,18 @@ std::vector<char> compile_callback()
 
 int main()
 {
+<<<<<<< HEAD
+||||||| d46ec4cca7e7
+#ifdef WIN32 std::cout << "This sample is temporarily disabled on Windows" << std::endl;
+    return EXIT_SUCCESS;
+#else
+
+=======
+#ifdef _WIN32 std::cout << "This sample is temporarily disabled on Windows" << std::endl;
+    return EXIT_SUCCESS;
+#else
+
+>>>>>>> upstream/develop
     std::cout << "hipfft 1D double-precision complex-to-complex transform with callback\n";
 
     const int Nx        = 8;

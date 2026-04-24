@@ -57,6 +57,7 @@ CandidateSelectionMetadata::CandidateSelectionMetadata(const std::string& arch,
                                                        const std::string& solver)
 {
     const auto path = GetSystemDbPath() / (arch + "_" + solver + "_metadata.tn.model");
+    MIOPEN_LOG_I2("Loading metadata file: " + path.string());
     std::ifstream file(path);
     if(!file.is_open())
     {
@@ -414,6 +415,16 @@ EncodeKernelParams(const std::vector<std::vector<std::string>>& valid_kernel_par
 
     for(const auto& candidate : valid_kernel_params)
     {
+        std::ostringstream candidate_str;
+        candidate_str << "[";
+        for(size_t i = 0; i < candidate.size(); ++i)
+        {
+            if(i > 0)
+                candidate_str << ", ";
+            candidate_str << "\"" << candidate[i] << "\"";
+        }
+        candidate_str << "]";
+        MIOPEN_LOG_I2("Kernel Parameter Candidate: " << candidate_str.str());
         // Get kernel_str_mapping for this candidate's kernel_name
         if(candidate.empty())
             MIOPEN_THROW("Candidate vector is empty, cannot extract kernel_name.");
@@ -429,9 +440,10 @@ EncodeKernelParams(const std::vector<std::vector<std::string>>& valid_kernel_par
         {
             // Kernel not in metadata - likely a new CK kernel not yet supported by the model
             // Log warning and create sentinel encoding to preserve index alignment
-            MIOPEN_LOG_W("Kernel not in metadata (new CK kernel?): " << kernel_name);
-            MIOPEN_LOG_W("AI model cannot predict for this kernel - it will be ranked last");
-            MIOPEN_LOG_W("Consider updating the AI model to support this kernel type");
+            MIOPEN_LOG_I2("Kernel not in metadata (new CK kernel?): "
+                          << kernel_name
+                          << ". AI model cannot predict for this kernel - it will be ranked last. "
+                             "Consider updating the AI model to support this kernel type");
 
             // Create sentinel encoding (all NaN) to ensure this kernel ranks last
             // NaN propagates through dot product, resulting in NaN score which sorts last
@@ -476,18 +488,19 @@ EncodeKernelParams(const std::vector<std::vector<std::string>>& valid_kernel_par
         {
             // Skip this entire candidate rather than partial processing
             // also give a clear log message about the candidate being skipped
-            std::ostringstream candidate_str;
-            candidate_str << "[";
+            std::ostringstream invalid_candidate_str;
+            invalid_candidate_str << "[";
             for(size_t i = 0; i < candidate.size(); ++i)
             {
                 if(i > 0)
-                    candidate_str << ", ";
-                candidate_str << "\"" << candidate[i] << "\"";
+                    invalid_candidate_str << ", ";
+                invalid_candidate_str << "\"" << candidate[i] << "\"";
             }
-            candidate_str << "]";
+            invalid_candidate_str << "]";
 
             MIOPEN_LOG_W("Skipping candidate due to invalid kernel string mapping. "
-                         << "Kernel: " << kernel_name << ", Candidate: " << candidate_str.str()
+                         << "Kernel: " << kernel_name
+                         << ", Candidate: " << invalid_candidate_str.str()
                          << ", Total mappings: " << kernel_str_mapping.size());
             continue; // Continue to the next candidate
         }
@@ -564,9 +577,10 @@ EncodeKernelParams(const std::vector<std::vector<std::string>>& valid_kernel_par
 
                             if(!found_ws)
                             {
-                                MIOPEN_LOG_WE("No encoding found in metadata for value '"
-                                              << param_value
-                                              << "' of output parameter: " << param_name);
+                                MIOPEN_LOG_WE(
+                                    "Kernel: "
+                                    << kernel_name << " - No encoding found in metadata for value '"
+                                    << param_value << "' of output parameter: " << param_name);
                                 MIOPEN_LOG_WE("setting it to the NaN value");
                                 value = missing_value_encoding;
                             }

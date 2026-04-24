@@ -47,11 +47,17 @@ concept BlockGemmPipelineDescriptor = requires(T t) {
 // Concept for parameters that describe a gridwise WMMA GEMM problem.
 template <typename T>
 concept GridwiseWmmaGemmDescriptor = requires(T t) {
-    { t.k1 } -> SizeType;
-    { t.m_per_wmma } -> SizeType;
-    { t.n_per_wmma } -> SizeType;
-    { t.m_wmma_per_wave } -> SizeType;
-    { t.n_wmma_per_wave } -> SizeType;
+    (
+    requires { { T::k1 } -> SizeType; } ||
+    (requires { { T::ak1 } -> SizeType; } &&
+     requires { { T::bk1 } -> SizeType; })
+) &&
+requires {
+    { T::m_per_wmma } -> SizeType;
+    { T::n_per_wmma } -> SizeType;
+    { T::m_wmma_per_wave } -> SizeType;
+    { T::n_wmma_per_wave } -> SizeType;
+};
 };
 
 // Concept for vectorized data transfer for convolution input tensors.
@@ -98,13 +104,13 @@ concept LdsTransferDescriptor = requires(T t) {
 template <typename T>
 concept EpilogueDescriptor = requires(T t) {
     { t.m_xdl_per_wave_per_shuffle } -> SizeType;
-    { t.n_per_wave_per_shuffle } -> SizeType;
+    { t.n_xdl_per_wave_per_shuffle } -> SizeType;
     { t.scalar_per_vector } -> SizeType;
 };
 
 // Concept for the thread cluster access order
 template <typename T>
-concept AccessOrderDescriptor = requires(T t) {
+concept ThreadClusterOrderDescriptor = requires(T t) {
     { t.order } -> std::convertible_to<std::array<size_t, 3>>;
 } || requires(T t) {
     { t.order } -> std::convertible_to<std::array<size_t, 4>>;
@@ -149,6 +155,7 @@ concept TileOptimizationsDescriptor = requires(T t) {
     { t.num_groups_to_merge } -> std::convertible_to<int>;
     { t.split_image } -> std::convertible_to<bool>;
     { t.explicit_gemm } -> std::convertible_to<bool>;
+    { t.two_stage } -> std::convertible_to<bool>;
 };
 
 // Base requirement for all ConvAlgorithm concepts, i.e., all conv algorithm concepts must meet this
@@ -189,6 +196,14 @@ concept GridwiseBwdXdlGemmDescriptor = requires(T t) {
 
 // Concept to check if a struct specifies gridwise XDL GEMM info.
 template <typename T>
+concept GridwiseBwdDataXdlGemmDescriptor = requires(T t) {
+    { t.ak1 } -> SizeType;
+    { t.bk1 } -> SizeType;
+    { t.xdl_params } -> GridwiseXdlGemmDescriptor;
+};
+
+// Concept to check if a struct specifies gridwise XDL GEMM info.
+template <typename T>
 concept SpecifiesGridwiseFwdXdlGemm = requires(T t) {
     { t.gridwise_gemm } -> GridwiseFwdXdlGemmDescriptor;
 };
@@ -197,6 +212,12 @@ concept SpecifiesGridwiseFwdXdlGemm = requires(T t) {
 template <typename T>
 concept SpecifiesGridwiseBwdXdlGemm = requires(T t) {
     { t.gridwise_gemm } -> GridwiseBwdXdlGemmDescriptor;
+};
+
+// Concept to check if a struct specifies gridwise XDL GEMM info.
+template <typename T>
+concept SpecifiesGridwiseBwdDataXdlGemm = requires(T t) {
+    { t.gridwise_gemm } -> GridwiseBwdDataXdlGemmDescriptor;
 };
 
 // Concept to check if a struct specifies gridwise WMMA GEMM info.
@@ -231,16 +252,16 @@ concept SpecifiesLdsTransfer = requires(T t) {
 
 // Concept to check if a struct specifies thread cluster access order info.
 template <typename T>
-concept SpecifiesThreadClusterAccessOrder = requires(T t) {
-    { T::transfer.a.block_transfer_access_order } -> AccessOrderDescriptor;
-    { T::transfer.b.block_transfer_access_order } -> AccessOrderDescriptor;
+concept SpecifiesThreadClusterArrangeOrder = requires(T t) {
+    { T::transfer.a.thread_cluster_arrange_order } -> ThreadClusterOrderDescriptor;
+    { T::transfer.b.thread_cluster_arrange_order } -> ThreadClusterOrderDescriptor;
 };
 
 // Concept to check if a struct specifies source access order info.
 template <typename T>
 concept SpecifiesSourceAccessOrder = requires(T t) {
-    { T::transfer.a.src_access_order } -> AccessOrderDescriptor;
-    { T::transfer.b.src_access_order } -> AccessOrderDescriptor;
+    { T::transfer.a.src_access_order } -> ThreadClusterOrderDescriptor;
+    { T::transfer.b.src_access_order } -> ThreadClusterOrderDescriptor;
 };
 
 // Concept to check if struct specifies block GEMM.
@@ -275,6 +296,7 @@ concept SpecifiesTileOptimizations = requires {
     { T::optimizations.num_groups_to_merge } -> std::convertible_to<int>;
     { T::optimizations.split_image } -> std::convertible_to<bool>;
     { T::optimizations.explicit_gemm } -> std::convertible_to<bool>;
+    { T::optimizations.two_stage } -> std::convertible_to<bool>;
 };
 
 template <typename T>
@@ -290,6 +312,11 @@ concept SpecifiesFwdConvSpecialization = requires {
 template <typename T>
 concept SpecifiesBwdWeightConvSpecialization = requires {
     { T::bwd_weight_specialization } -> std::convertible_to<ConvSpecialization>;
+};
+
+template <typename T>
+concept SpecifiesBwdDataConvSpecialization = requires {
+    { T::bwd_data_specialization } -> std::convertible_to<ConvSpecialization>;
 };
 
 template <typename T>
@@ -441,6 +468,19 @@ concept SpecifiesDlBwdBlockTransfer = requires {
 template <typename T>
 concept SpecifiesDlEpilogue = requires {
     { T::transfer.c } -> DlEpilogueDescriptor;
+};
+
+// Concept to detect StreamK configuration in a tile algorithm descriptor.
+template <typename T>
+concept StreamKDescriptor = requires(T t) {
+    { t.reduction_strategy } -> std::convertible_to<StreamKReductionStrategy>;
+    { t.persistent } -> std::convertible_to<bool>;
+};
+
+// Concept to check if a tile algorithm specifies StreamK work distribution.
+template <typename T>
+concept SpecifiesStreamK = requires {
+    { T::streamk } -> StreamKDescriptor;
 };
 
 } // namespace ck_tile::builder
