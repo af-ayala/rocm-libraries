@@ -52,13 +52,6 @@ std::vector<char> compile_inprocess(const std::string& kernel_src, const std::st
     options.push_back("-std=c++20");
     options.push_back(gpu_arch_arg.c_str());
     options.push_back("-mcumode");
-    if(gpu_arch == ARCH_SPIRV)
-    {
-        // For SPIR-V, we only want to compile this code and will
-        // link it with other pieces of SPIR-V to produce the final
-        // code object
-        options.push_back("-c");
-    }
 #ifdef ADDRESS_SANITIZER
     options.push_back("-fsanitize=address");
 #endif
