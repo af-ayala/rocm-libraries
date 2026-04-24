@@ -422,6 +422,49 @@ public:
         return fft_status_success;
     }
 
+    fft_status set_jit_callbacks(const char*         load_cb_symbol,
+                                 std::vector<char>*  load_cb_func,
+                                 std::vector<void*>* load_cb_data,
+                                 const char*         store_cb_symbol,
+                                 std::vector<char>*  store_cb_func,
+                                 std::vector<void*>* store_cb_data,
+                                 size_t              load_cb_shared_mem_bytes,
+                                 size_t              store_cb_shared_mem_bytes) override
+    {
+        rocfft_status fft_status = rocfft_status_success;
+        if(run_jit_callbacks)
+        {
+            auto expected_load_cb_data_count  = expected_callback_count(ifields);
+            auto expected_store_cb_data_count = expected_callback_count(ofields);
+            check_callback_vec(load_cb_data, expected_load_cb_data_count, false);
+            check_callback_vec(store_cb_data, expected_store_cb_data_count, false);
+
+            fft_status = rocfft.plan_description_set_load_callback(
+                desc,
+                load_cb_symbol,
+                load_cb_func ? load_cb_func->data() : nullptr,
+                load_cb_func ? load_cb_func->size() : 0,
+                load_cb_data ? load_cb_data->data() : nullptr,
+                load_cb_shared_mem_bytes);
+            if(fft_status != rocfft_status_success)
+            {
+                throw std::runtime_error("rocfft_plan_description_set_load_callback failed");
+            }
+            fft_status = rocfft.plan_description_set_store_callback(
+                desc,
+                store_cb_symbol,
+                store_cb_func ? store_cb_func->data() : nullptr,
+                store_cb_func ? store_cb_func->size() : 0,
+                store_cb_data ? store_cb_data->data() : nullptr,
+                store_cb_shared_mem_bytes);
+            if(fft_status != rocfft_status_success)
+            {
+                throw std::runtime_error("rocfft_plan_description_set_store_callback failed");
+            }
+        }
+        return fft_status_success;
+    }
+
     fft_status execute(void** in, void** out) override
     {
         auto ret = rocfft.execute(plan, in, out, info);
@@ -766,6 +809,8 @@ struct rocfft_funcs
     ROCFFT_API_WRAP(plan_description_set_comm);
     ROCFFT_API_WRAP(plan_description_set_data_layout);
     ROCFFT_API_WRAP(plan_description_set_scale_factor);
+    ROCFFT_API_WRAP(plan_description_set_load_callback);
+    ROCFFT_API_WRAP(plan_description_set_store_callback);
     ROCFFT_API_WRAP(plan_destroy);
     ROCFFT_API_WRAP(plan_get_work_buffer_size);
     ROCFFT_API_WRAP(setup);
@@ -849,6 +894,8 @@ struct dyna_rocfft_funcs
     ROCFFT_DYNA_API_WRAP(plan_description_set_comm);
     ROCFFT_DYNA_API_WRAP(plan_description_set_data_layout);
     ROCFFT_DYNA_API_WRAP(plan_description_set_scale_factor);
+    ROCFFT_DYNA_API_WRAP(plan_description_set_load_callback);
+    ROCFFT_DYNA_API_WRAP(plan_description_set_store_callback);
     ROCFFT_DYNA_API_WRAP(plan_destroy);
     ROCFFT_DYNA_API_WRAP(plan_get_work_buffer_size);
     ROCFFT_DYNA_API_WRAP(setup);
@@ -880,6 +927,8 @@ struct dyna_rocfft_funcs
         ROCFFT_DYNA_API_LOAD(plan_description_set_comm);
         ROCFFT_DYNA_API_LOAD(plan_description_set_data_layout);
         ROCFFT_DYNA_API_LOAD(plan_description_set_scale_factor);
+        ROCFFT_DYNA_API_LOAD(plan_description_set_store_callback);
+        ROCFFT_DYNA_API_LOAD(plan_description_set_load_callback);
         ROCFFT_DYNA_API_LOAD(plan_destroy);
         ROCFFT_DYNA_API_LOAD(plan_get_work_buffer_size);
         ROCFFT_DYNA_API_LOAD(setup);
@@ -918,6 +967,10 @@ struct dyna_rocfft_funcs
         std::swap(this->plan_description_set_comm, other.plan_description_set_comm);
         std::swap(this->plan_description_set_data_layout, other.plan_description_set_data_layout);
         std::swap(this->plan_description_set_scale_factor, other.plan_description_set_scale_factor);
+        std::swap(this->plan_description_set_load_callback,
+                  other.plan_description_set_load_callback);
+        std::swap(this->plan_description_set_store_callback,
+                  other.plan_description_set_store_callback);
         std::swap(this->plan_destroy, other.plan_destroy);
         std::swap(this->plan_get_work_buffer_size, other.plan_get_work_buffer_size);
         std::swap(this->setup, other.setup);

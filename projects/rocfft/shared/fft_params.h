@@ -729,7 +729,7 @@ public:
     // expected size.  Optionally also check that each pointer is
     // non-null.  Throws an exception if a check fails.  The vector
     // itself can be null, as callbacks are optional.
-    static void check_callback_vec(std::vector<void*>* cb, size_t expected_size, bool nonnull)
+    static void check_callback_vec(const std::vector<void*>* cb, size_t expected_size, bool nonnull)
     {
         if(!cb)
             return;
@@ -746,9 +746,10 @@ public:
     size_t multiGPU = 0;
 
     // run testing load/store callbacks
-    bool                    run_callbacks   = false;
-    static constexpr double load_cb_scalar  = 0.457813941;
-    static constexpr double store_cb_scalar = 0.391504938;
+    bool                    run_callbacks     = false;
+    bool                    run_jit_callbacks = false;
+    static constexpr double load_cb_scalar    = 0.457813941;
+    static constexpr double store_cb_scalar   = 0.391504938;
 
     // Check that data outside of output strides is not overwritten.
     // This is only set explicitly on some tests where there's space
@@ -1078,6 +1079,8 @@ public:
 
         if(run_callbacks)
             ret += "_CB";
+        if(run_jit_callbacks)
+            ret += "_JITCB";
 
         if(scale_factor != 1.0)
             ret += "_scale";
@@ -1238,6 +1241,12 @@ public:
         if(pos < vals.size() && vals[pos] == "CB")
         {
             run_callbacks = true;
+            ++pos;
+        }
+
+        if(pos < vals.size() && vals[pos] == "JITCB")
+        {
+            run_jit_callbacks = true;
             ++pos;
         }
 
@@ -1945,6 +1954,10 @@ public:
     {
         return run_callbacks;
     }
+    bool is_jit_callback() const
+    {
+        return run_jit_callbacks;
+    }
     // checks if the parameters are consistent with a "default" data layout (considering strides and distances)
     bool is_using_default_layout() const
     {
@@ -2287,6 +2300,18 @@ public:
         return fft_status_success;
     }
 
+    virtual fft_status set_jit_callbacks(const char*         load_cb_symbol,
+                                         std::vector<char>*  load_cb_func,
+                                         std::vector<void*>* load_cb_data,
+                                         const char*         store_cb_symbol,
+                                         std::vector<char>*  store_cb_func,
+                                         std::vector<void*>* store_cb_data,
+                                         size_t              load_cb_shared_mem_bytes,
+                                         size_t              store_cb_shared_mem_bytes)
+    {
+        return fft_status_success;
+    }
+
     virtual fft_status execute(void** in, void** out)
     {
         return fft_status_success;
@@ -2422,8 +2447,9 @@ public:
         ooffset       = params_forward.ioffset;
         auto_allocate = params_forward.auto_allocate;
 
-        run_callbacks = params_forward.run_callbacks;
-        multiGPU      = params_forward.multiGPU;
+        run_callbacks     = params_forward.run_callbacks;
+        run_jit_callbacks = params_forward.run_jit_callbacks;
+        multiGPU          = params_forward.multiGPU;
 
         check_output_strides = params_forward.check_output_strides;
 
