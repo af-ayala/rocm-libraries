@@ -45,7 +45,7 @@ std::vector<char> compile_inprocess(const std::string& kernel_src, const std::st
         throw std::runtime_error("unable to create program");
     }
 
-    std::string gpu_arch_arg = "--gpu-architecture=" + gpu_arch;
+    std::string gpu_arch_arg = "--offload-arch=" + gpu_arch;
 
     std::vector<const char*> options;
     options.push_back("-O3");
