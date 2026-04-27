@@ -445,7 +445,8 @@ int main(int argc, char* argv[])
         });
 
     app.add_flag("--callback", "Inject load/store callbacks")->each([&](const std::string&) {
-        manual_params.run_callbacks = true;
+        // FIXME: handle JIT too
+        manual_params.run_callbacks = fft_params::RunCallbacksType::LEGACY;
     });
 
     app.add_option("--seed", random_seed, "Random seed; if unset, use an actual random seed")

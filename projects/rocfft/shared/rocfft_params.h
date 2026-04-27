@@ -394,7 +394,7 @@ public:
                              size_t              load_cb_shared_mem_bytes  = 0,
                              size_t              store_cb_shared_mem_bytes = 0) override
     {
-        if(run_callbacks)
+        if(run_callbacks == RunCallbacksType::LEGACY)
         {
             auto expected_load_cb_count  = expected_callback_count(ifields);
             auto expected_store_cb_count = expected_callback_count(ofields);
@@ -432,7 +432,7 @@ public:
                                  size_t              store_cb_shared_mem_bytes) override
     {
         rocfft_status fft_status = rocfft_status_success;
-        if(run_jit_callbacks)
+        if(run_callbacks == RunCallbacksType::JIT)
         {
             auto expected_load_cb_data_count  = expected_callback_count(ifields);
             auto expected_store_cb_data_count = expected_callback_count(ofields);

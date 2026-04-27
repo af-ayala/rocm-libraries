@@ -97,7 +97,8 @@ INSTANTIATE_TEST_SUITE_P(
 TEST_P(change_type, short_to_float)
 {
     rocfft_params params(GetParam());
-    params.run_callbacks = true;
+    // FIXME: handle JIT too
+    params.run_callbacks = fft_params::RunCallbacksType::LEGACY;
 
     ASSERT_EQ(params.create_plan(), fft_status_success);
 

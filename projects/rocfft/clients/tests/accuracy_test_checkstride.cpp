@@ -86,18 +86,20 @@ inline auto param_checkstride()
 
                         fft_params param;
 
-                        param.length               = std::get<0>(s);
-                        param.istride              = std::get<1>(s);
-                        param.ostride              = std::get<1>(s);
-                        param.nbatch               = std::get<2>(s);
-                        param.precision            = precision;
-                        param.idist                = std::get<3>(s);
-                        param.odist                = std::get<3>(s);
-                        param.transform_type       = std::get<0>(types);
-                        param.placement            = std::get<1>(types);
-                        param.itype                = std::get<2>(types);
-                        param.otype                = std::get<3>(types);
-                        param.run_callbacks        = callback;
+                        param.length         = std::get<0>(s);
+                        param.istride        = std::get<1>(s);
+                        param.ostride        = std::get<1>(s);
+                        param.nbatch         = std::get<2>(s);
+                        param.precision      = precision;
+                        param.idist          = std::get<3>(s);
+                        param.odist          = std::get<3>(s);
+                        param.transform_type = std::get<0>(types);
+                        param.placement      = std::get<1>(types);
+                        param.itype          = std::get<2>(types);
+                        param.otype          = std::get<3>(types);
+                        // FIXME: handle JIT too
+                        if(callback)
+                            param.run_callbacks = fft_params::RunCallbacksType::LEGACY;
                         param.check_output_strides = true;
 
                         param.validate();

@@ -746,10 +746,15 @@ public:
     size_t multiGPU = 0;
 
     // run testing load/store callbacks
-    bool                    run_callbacks     = false;
-    bool                    run_jit_callbacks = false;
-    static constexpr double load_cb_scalar    = 0.457813941;
-    static constexpr double store_cb_scalar   = 0.391504938;
+    enum class RunCallbacksType
+    {
+        NONE, // don't run callbacks
+        LEGACY, // run legacy callbacks, where users provide a device function pointer
+        JIT, // run jit callbacks, where users provide a function as compiled SPIR-V
+    };
+    RunCallbacksType        run_callbacks   = RunCallbacksType::NONE;
+    static constexpr double load_cb_scalar  = 0.457813941;
+    static constexpr double store_cb_scalar = 0.391504938;
 
     // Check that data outside of output strides is not overwritten.
     // This is only set explicitly on some tests where there's space
@@ -1077,9 +1082,9 @@ public:
             append_size_vec(ooffset);
         }
 
-        if(run_callbacks)
+        if(run_callbacks == RunCallbacksType::LEGACY)
             ret += "_CB";
-        if(run_jit_callbacks)
+        else if(run_callbacks == RunCallbacksType::JIT)
             ret += "_JITCB";
 
         if(scale_factor != 1.0)
@@ -1240,13 +1245,13 @@ public:
 
         if(pos < vals.size() && vals[pos] == "CB")
         {
-            run_callbacks = true;
+            run_callbacks = RunCallbacksType::LEGACY;
             ++pos;
         }
 
         if(pos < vals.size() && vals[pos] == "JITCB")
         {
-            run_jit_callbacks = true;
+            run_callbacks = RunCallbacksType::JIT;
             ++pos;
         }
 
@@ -1952,11 +1957,7 @@ public:
     }
     bool is_callback() const
     {
-        return run_callbacks;
-    }
-    bool is_jit_callback() const
-    {
-        return run_jit_callbacks;
+        return run_callbacks != RunCallbacksType::NONE;
     }
     // checks if the parameters are consistent with a "default" data layout (considering strides and distances)
     bool is_using_default_layout() const
@@ -2447,9 +2448,8 @@ public:
         ooffset       = params_forward.ioffset;
         auto_allocate = params_forward.auto_allocate;
 
-        run_callbacks     = params_forward.run_callbacks;
-        run_jit_callbacks = params_forward.run_jit_callbacks;
-        multiGPU          = params_forward.multiGPU;
+        run_callbacks = params_forward.run_callbacks;
+        multiGPU      = params_forward.multiGPU;
 
         check_output_strides = params_forward.check_output_strides;
 

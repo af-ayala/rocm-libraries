@@ -338,7 +338,9 @@ inline auto param_generator_base(const double                             base_p
                                                    && param.otype
                                                           != fft_array_type_hermitian_planar)
                                                 {
-                                                    param.run_callbacks = true;
+                                                    // FIXME: handle JIT too
+                                                    param.run_callbacks
+                                                        = fft_params::RunCallbacksType::LEGACY;
                                                 }
                                                 else
                                                 {
