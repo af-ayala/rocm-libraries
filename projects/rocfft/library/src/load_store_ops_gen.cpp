@@ -57,7 +57,10 @@ struct StoreOpsVisitor : public BaseVisitor
             return {x};
 
         TStatement y{x};
-        y.value = y.value * scale_factor;
+        if(ops.scale_factor != 1.0)
+        {
+            y.value = y.value * scale_factor;
+        }
         return {y};
     }
 

@@ -38,6 +38,7 @@ __host__ __device__ Tdata load_callback(Tdata* input, size_t offset, void* cbdat
 }
 
 static const char* load_callback_jit = R"(
+extern "C"
 __device__ Tdata load_callback(Tdata* input, size_t offset, void* cbdata, void* sharedMem)
 {
     auto testdata = static_cast<const callback_test_data*>(cbdata);
@@ -65,6 +66,7 @@ __host__ __device__ Tdata
 }
 
 static const char* load_callback_round_trip_inverse_jit = R"(
+extern "C"
 __device__ Tdata
     load_callback_round_trip_inverse(Tdata* input, size_t offset, void* cbdata, void* sharedMem)
 {
@@ -235,9 +237,9 @@ static const char* get_jit_callback_typedef(fft_array_type itype, fft_precision 
         case fft_precision_half:
             return "typedef rocfft_complex<rocfft_fp16> Tdata; typedef rocfft_fp16 Treal;";
         case fft_precision_single:
-            return "typedef rocfft_complex<float> Tdata; typedef float Tdata;";
+            return "typedef rocfft_complex<float> Tdata; typedef float Treal;";
         case fft_precision_double:
-            return "typedef rocfft_complex<double> Tdata; typedef double Tdata;";
+            return "typedef rocfft_complex<double> Tdata; typedef double Treal;";
         }
     }
     case fft_array_type_real:
@@ -258,9 +260,15 @@ static const char* get_jit_callback_typedef(fft_array_type itype, fft_precision 
     }
 }
 
+#include <fstream>
+
 static std::vector<char> compile_to_spirv(const std::string&         src,
                                           callback_hip_error_handler runtime_err_handler)
 {
+    std::ofstream outfile("out.hip");
+    outfile << src << std::endl;
+    outfile.close();
+
     struct RaiiState
     {
         hiprtcProgram prog = nullptr;
@@ -318,6 +326,7 @@ std::vector<char>  get_load_callback_jit(fft_array_type             itype,
 {
     std::string src = rocfft_complex_h;
     src += get_jit_callback_typedef(itype, precision);
+    src += callback_test_data_jit;
 
     src += round_trip_inverse ? load_callback_round_trip_inverse_jit : load_callback_jit;
 
@@ -335,6 +344,7 @@ __host__ __device__ static void
 }
 
 static const char* store_callback_jit = R"(
+extern "C"
 __device__ void
     store_callback(Tdata* output, size_t offset, Tdata element, void* cbdata, void* sharedMem)
 {
@@ -373,6 +383,7 @@ __device__ auto store_callback_round_trip_inverse_dev_complex_double
     = store_callback_round_trip_inverse<rocfft_complex<double>>;
 
 static const char* store_callback_round_trip_inverse_jit = R"(
+extern "C"
 __device__ static void store_callback_round_trip_inverse(
     Tdata* output, size_t offset, Tdata element, void* cbdata, void* sharedMem)
 {
@@ -524,6 +535,7 @@ std::vector<char> get_store_callback_jit(fft_array_type             otype,
 {
     std::string src = rocfft_complex_h;
     src += get_jit_callback_typedef(otype, precision);
+    src += callback_test_data_jit;
 
     src += round_trip_inverse ? store_callback_round_trip_inverse_jit : store_callback_jit;
 

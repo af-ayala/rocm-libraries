@@ -498,6 +498,18 @@ public:
 
     fft_auto_allocation auto_allocate = fft_auto_allocation_default;
 
+    // JIT callback parameters are specified at plan creation time, so
+    // they need to be known and remembered before create_plan() is
+    // called
+    const char*        load_cb_symbol = nullptr;
+    std::vector<char>  load_cb_func;
+    std::vector<void*> load_cb_data;
+    const char*        store_cb_symbol = nullptr;
+    std::vector<char>  store_cb_func;
+    std::vector<void*> store_cb_data;
+    size_t             load_cb_shared_mem_bytes  = 0;
+    size_t             store_cb_shared_mem_bytes = 0;
+
     enum fft_mp_lib
     {
         fft_mp_lib_none,
@@ -2301,18 +2313,6 @@ public:
         return fft_status_success;
     }
 
-    virtual fft_status set_jit_callbacks(const char*         load_cb_symbol,
-                                         std::vector<char>*  load_cb_func,
-                                         std::vector<void*>* load_cb_data,
-                                         const char*         store_cb_symbol,
-                                         std::vector<char>*  store_cb_func,
-                                         std::vector<void*>* store_cb_data,
-                                         size_t              load_cb_shared_mem_bytes,
-                                         size_t              store_cb_shared_mem_bytes)
-    {
-        return fft_status_success;
-    }
-
     virtual fft_status execute(void** in, void** out)
     {
         return fft_status_success;
@@ -2854,6 +2854,20 @@ static bool lexical_cast(const std::string& word, fft_params::fft_mp_lib& mp_lib
         mp_lib = fft_params::fft_mp_lib_mpi;
     else
         throw std::runtime_error("Invalid multi-process library specified");
+    return true;
+}
+
+// Used for CLI11 parsing of callbacks enum
+static bool lexical_cast(const std::string& word, fft_params::RunCallbacksType& cbtype)
+{
+    if(word == "none")
+        cbtype = fft_params::RunCallbacksType::NONE;
+    else if(word == "legacy")
+        cbtype = fft_params::RunCallbacksType::LEGACY;
+    else if(word == "jit")
+        cbtype = fft_params::RunCallbacksType::JIT;
+    else
+        throw std::runtime_error("Invalid callback type specified");
     return true;
 }
 

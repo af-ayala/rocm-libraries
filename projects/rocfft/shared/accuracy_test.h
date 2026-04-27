@@ -660,6 +660,36 @@ inline void fft_vs_reference_impl(Tparams& params, bool round_trip)
     // returned by previous HIP runtime API calls.
     hipError_t hip_status = hipGetLastError();
 
+    std::vector<gpubuf_t<callback_test_data>> all_cb_data;
+    if(params.run_callbacks == fft_params::RunCallbacksType::JIT)
+    {
+        auto runtime_err_handler = [&](const std::string& msg) {
+            ++n_hip_failures;
+            if(skip_runtime_fails)
+            {
+                throw ROCFFT_SKIP{msg};
+            }
+            else
+            {
+                throw ROCFFT_FAIL{msg};
+            }
+        };
+        params.load_cb_symbol = "load_callback";
+        get_rank_load_callback_jit(params,
+                                   params.load_cb_func,
+                                   params.load_cb_data,
+                                   runtime_err_handler,
+                                   false,
+                                   all_cb_data);
+        params.store_cb_symbol = "load_callback";
+        get_rank_store_callback_jit(params,
+                                    params.store_cb_func,
+                                    params.store_cb_data,
+                                    runtime_err_handler,
+                                    false,
+                                    all_cb_data);
+    }
+
     // Make sure that the parameters make sense:
     ASSERT_TRUE(params.valid(verbose));
 

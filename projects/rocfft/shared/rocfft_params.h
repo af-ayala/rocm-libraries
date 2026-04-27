@@ -276,6 +276,31 @@ public:
                    != rocfft_status_success)
                     throw std::runtime_error("rocfft_plan_description_set_comm failed");
             }
+
+            if(run_callbacks == RunCallbacksType::JIT)
+            {
+                check_jit_callback_params();
+                fft_status = rocfft.plan_description_set_load_callback(desc,
+                                                                       load_cb_symbol,
+                                                                       load_cb_func.data(),
+                                                                       load_cb_func.size(),
+                                                                       load_cb_data.data(),
+                                                                       load_cb_shared_mem_bytes);
+                if(fft_status != rocfft_status_success)
+                {
+                    throw std::runtime_error("rocfft_plan_description_set_load_callback failed");
+                }
+                fft_status = rocfft.plan_description_set_store_callback(desc,
+                                                                        store_cb_symbol,
+                                                                        store_cb_func.data(),
+                                                                        store_cb_func.size(),
+                                                                        store_cb_data.data(),
+                                                                        store_cb_shared_mem_bytes);
+                if(fft_status != rocfft_status_success)
+                {
+                    throw std::runtime_error("rocfft_plan_description_set_store_callback failed");
+                }
+            }
         }
 
         if(plan == nullptr)
@@ -364,7 +389,7 @@ public:
 
     // Return the number of expected callback entries for supplied
     // fields.
-    size_t expected_callback_count(const std::vector<fft_field>& fields)
+    size_t expected_callback_count(const std::vector<fft_field>& fields) const
     {
         // If fields are not specified, we consider the input or
         // output to have a single brick (and thus expect a single
@@ -385,6 +410,24 @@ public:
             }
         }
         return expected_callbacks;
+    }
+
+    // Check that JIT callback parameters have been specified properly,
+    // if JIT callbacks are required.  Throws an exception if the check
+    // fails.
+    void check_jit_callback_params() const
+    {
+        if(run_callbacks != RunCallbacksType::JIT)
+            return;
+
+        // Currently, callback tests will set both load + store callbacks
+        // at the same time
+        if(load_cb_symbol == nullptr || store_cb_symbol == nullptr)
+            throw std::invalid_argument("null cb symbol");
+        auto expected_load_cb_data_count  = expected_callback_count(ifields);
+        auto expected_store_cb_data_count = expected_callback_count(ofields);
+        check_callback_vec(&load_cb_data, expected_load_cb_data_count, false);
+        check_callback_vec(&store_cb_data, expected_store_cb_data_count, false);
     }
 
     fft_status set_callbacks(std::vector<void*>* load_cb_func,
@@ -418,49 +461,6 @@ public:
                 store_cb_shared_mem_bytes);
             if(roc_status != rocfft_status_success)
                 return fft_status_from_rocfftparams(roc_status);
-        }
-        return fft_status_success;
-    }
-
-    fft_status set_jit_callbacks(const char*         load_cb_symbol,
-                                 std::vector<char>*  load_cb_func,
-                                 std::vector<void*>* load_cb_data,
-                                 const char*         store_cb_symbol,
-                                 std::vector<char>*  store_cb_func,
-                                 std::vector<void*>* store_cb_data,
-                                 size_t              load_cb_shared_mem_bytes,
-                                 size_t              store_cb_shared_mem_bytes) override
-    {
-        rocfft_status fft_status = rocfft_status_success;
-        if(run_callbacks == RunCallbacksType::JIT)
-        {
-            auto expected_load_cb_data_count  = expected_callback_count(ifields);
-            auto expected_store_cb_data_count = expected_callback_count(ofields);
-            check_callback_vec(load_cb_data, expected_load_cb_data_count, false);
-            check_callback_vec(store_cb_data, expected_store_cb_data_count, false);
-
-            fft_status = rocfft.plan_description_set_load_callback(
-                desc,
-                load_cb_symbol,
-                load_cb_func ? load_cb_func->data() : nullptr,
-                load_cb_func ? load_cb_func->size() : 0,
-                load_cb_data ? load_cb_data->data() : nullptr,
-                load_cb_shared_mem_bytes);
-            if(fft_status != rocfft_status_success)
-            {
-                throw std::runtime_error("rocfft_plan_description_set_load_callback failed");
-            }
-            fft_status = rocfft.plan_description_set_store_callback(
-                desc,
-                store_cb_symbol,
-                store_cb_func ? store_cb_func->data() : nullptr,
-                store_cb_func ? store_cb_func->size() : 0,
-                store_cb_data ? store_cb_data->data() : nullptr,
-                store_cb_shared_mem_bytes);
-            if(fft_status != rocfft_status_success)
-            {
-                throw std::runtime_error("rocfft_plan_description_set_store_callback failed");
-            }
         }
         return fft_status_success;
     }
