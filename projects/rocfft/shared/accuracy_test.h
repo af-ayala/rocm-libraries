@@ -681,7 +681,7 @@ inline void fft_vs_reference_impl(Tparams& params, bool round_trip)
                                    runtime_err_handler,
                                    false,
                                    all_cb_data);
-        params.store_cb_symbol = "load_callback";
+        params.store_cb_symbol = "store_callback";
         get_rank_store_callback_jit(params,
                                     params.store_cb_func,
                                     params.store_cb_data,

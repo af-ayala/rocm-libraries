@@ -212,7 +212,9 @@ std::string load_store_name_suffix(const std::optional<LoadOps>&  loadOps,
 void        append_load_store_args(RTCKernelArgs& kargs, TreeNode& node);
 void        make_load_store_ops(Function&                      f,
                                 const std::optional<LoadOps>&  loadOps,
-                                const std::optional<StoreOps>& storeOps,
-                                std::string&                   ops_declarations);
+                                const std::optional<StoreOps>& storeOps);
+// forward declarations required by ops (e.g. JIT callbacks)
+std::string load_store_decls(const std::optional<LoadOps>&  loadOps,
+                             const std::optional<StoreOps>& storeOps);
 
 #endif

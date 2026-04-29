@@ -427,8 +427,7 @@ std::string stockham_rtc(const StockhamGeneratorSpecs&    specs,
         *global = make_inverse(*global);
     }
 
-    std::string ops_declarations;
-    make_load_store_ops(*global, loadOps, storeOps, ops_declarations);
+    make_load_store_ops(*global, loadOps, storeOps);
 
     if(placement == rocfft_placement_notinplace)
     {
@@ -452,6 +451,7 @@ std::string stockham_rtc(const StockhamGeneratorSpecs&    specs,
     src += rocfft_complex_h;
     src += common_h;
     src += device_enum_h;
+    src += load_store_decls(loadOps, storeOps);
     src += memory_gfx_h;
     src += callback_h;
     src += butterfly_constant_h;
@@ -575,7 +575,6 @@ std::string stockham_rtc(const StockhamGeneratorSpecs&    specs,
     *global = make_callback_realcomplex(*global, cbtype);
 
     *global = make_rtc(*global, kernel_name);
-    src += ops_declarations;
     src += global->render();
     write_standalone_test_harness(*global, src);
     return src;

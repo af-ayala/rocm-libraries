@@ -106,18 +106,29 @@ std::string load_store_name_suffix(const std::optional<LoadOps>&  loadOps,
 
 void make_load_store_ops(Function&                      f,
                          const std::optional<LoadOps>&  loadOps,
-                         const std::optional<StoreOps>& storeOps,
-                         std::string&                   ops_declarations)
+                         const std::optional<StoreOps>& storeOps)
 {
-    ops_declarations.clear();
     if(loadOps && loadOps->enabled())
     {
         f = loadOps->add_ops(f);
-        ops_declarations += loadOps->forward_decls();
     }
     if(storeOps && storeOps->enabled())
     {
         f = storeOps->add_ops(f);
+    }
+}
+
+std::string load_store_decls(const std::optional<LoadOps>&  loadOps,
+                             const std::optional<StoreOps>& storeOps)
+{
+    std::string ops_declarations;
+    if(loadOps && loadOps->enabled())
+    {
+        ops_declarations += loadOps->forward_decls();
+    }
+    if(storeOps && storeOps->enabled())
+    {
         ops_declarations += storeOps->forward_decls();
     }
+    return ops_declarations;
 }

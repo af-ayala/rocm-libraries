@@ -4827,9 +4827,13 @@ void RuntimeCompilePlan(ExecPlan& execPlan)
     TreeNode* store_node            = nullptr;
     std::tie(load_node, store_node) = execPlan.get_load_store_nodes();
 
-    // callbacks are only possible on plans that don't use planar format for input or output
-    bool need_callbacks = !array_type_is_planar(load_node->inArrayType)
-                          && !array_type_is_planar(store_node->outArrayType);
+    // legacy callbacks are only possible on plans that don't use
+    // planar format for input or output, and that don't already use
+    // JIT callbacks
+    const bool need_callbacks = !array_type_is_planar(load_node->inArrayType)
+                                && !array_type_is_planar(store_node->outArrayType)
+                                && (!load_node->loadOps || !load_node->loadOps->has_spirv())
+                                && (!store_node->storeOps || !store_node->storeOps->has_spirv());
 
     // don't spend time compiling callback
     if(need_callbacks && !is_tuning)
