@@ -451,6 +451,7 @@ std::string stockham_rtc(const StockhamGeneratorSpecs&    specs,
     src += rocfft_complex_h;
     src += common_h;
     src += device_enum_h;
+    src += rtc_precision_type_decl(precision);
     src += load_store_decls(loadOps, storeOps);
     src += memory_gfx_h;
     src += callback_h;
@@ -495,9 +496,6 @@ std::string stockham_rtc(const StockhamGeneratorSpecs&    specs,
     if(bluestein_intrinsic_store)
         src += bluestein_intrinsic_store->render();
 
-    // make_rtc removes templates from global function - add typedefs
-    // and constants to replace them
-    src += rtc_precision_type_decl(precision);
     if(unit_stride)
         src += "static const StrideBin sb = SB_UNIT;\n";
     else
