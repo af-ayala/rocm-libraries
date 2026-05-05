@@ -508,7 +508,8 @@ void ExecPlan::ExecuteAsync(const rocfft_plan                       plan,
 
     try
     {
-        TransformPowX(*this,
+        TransformPowX(*plan,
+                      *this,
                       in_transform_ptrs,
                       (rootPlan->placement == rocfft_placement_inplace) ? in_transform_ptrs
                                                                         : out_transform_ptrs,

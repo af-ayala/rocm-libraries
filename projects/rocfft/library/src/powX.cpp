@@ -525,7 +525,8 @@ void SetDefaultCallback(const TreeNode* node, const SetCallbackType& type, void*
 
 // Internal plan executor.
 // For in-place transforms, in_buffer == out_buffer.
-void TransformPowX(const ExecPlan&                         execPlan,
+void TransformPowX(const rocfft_plan_t&                    plan,
+                   const ExecPlan&                         execPlan,
                    void*                                   in_buffer[],
                    void*                                   out_buffer[],
                    const rocfft_execution_info_internal&   info,
@@ -562,21 +563,47 @@ void TransformPowX(const ExecPlan&                         execPlan,
     TreeNode* store_node            = nullptr;
     std::tie(load_node, store_node) = execPlan.get_load_store_nodes();
 
-    auto it = callbacks.find(execPlan.location.device);
-    if(it != callbacks.end())
+    if(execPlan.rootPlan->loadOps)
     {
-        if(execPlan.rootPlan->loadOps)
+        // use JIT load callback if specified
+        if(plan.desc.loadOps.has_spirv())
         {
-            load_node->callbacks.load_cb_fn        = it->second.load_fn;
-            load_node->callbacks.load_cb_data      = it->second.load_data;
-            load_node->callbacks.load_cb_lds_bytes = info.get_load_cb_lds_bytes();
+            load_node->callbacks.load_cb_data
+                = plan.desc.loadOps.spirv_cb.cb_data[execPlan.location.device];
+            // FIXME: plumb shared mem bytes through
         }
-
-        if(execPlan.rootPlan->storeOps)
+        // otherwise, legacy callback
+        else
         {
-            store_node->callbacks.store_cb_fn        = it->second.store_fn;
-            store_node->callbacks.store_cb_data      = it->second.store_data;
-            store_node->callbacks.store_cb_lds_bytes = info.get_store_cb_lds_bytes();
+            auto it = callbacks.find(execPlan.location.device);
+            if(it != callbacks.end())
+            {
+                load_node->callbacks.load_cb_fn        = it->second.load_fn;
+                load_node->callbacks.load_cb_data      = it->second.load_data;
+                load_node->callbacks.load_cb_lds_bytes = info.get_load_cb_lds_bytes();
+            }
+        }
+    }
+
+    if(execPlan.rootPlan->storeOps)
+    {
+        // use JIT store callback if specified
+        if(plan.desc.storeOps.has_spirv())
+        {
+            store_node->callbacks.store_cb_data
+                = plan.desc.storeOps.spirv_cb.cb_data[execPlan.location.device];
+            // FIXME: plumb shared mem bytes through
+        }
+        // otherwise, legacy callback
+        else
+        {
+            auto it = callbacks.find(execPlan.location.device);
+            if(it != callbacks.end())
+            {
+                store_node->callbacks.store_cb_fn        = it->second.store_fn;
+                store_node->callbacks.store_cb_data      = it->second.store_data;
+                store_node->callbacks.store_cb_lds_bytes = info.get_store_cb_lds_bytes();
+            }
         }
     }
 
