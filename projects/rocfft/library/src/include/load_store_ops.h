@@ -78,8 +78,14 @@ struct LoadOps
     {
         std::string ret;
         if(spirv_cb.enabled())
+        {
             ret += std::string("extern \"C\" __device__ scalar_type ") + spirv_cb.symbol_name
-                   + "(const scalar_type*, size_t, void*, void*);\n";
+                   + "(scalar_type*, size_t, void*, void*);\n";
+            // declare a constant name for the load callback as well
+            ret += "__device__ auto load_cb_jit_fn = ";
+            ret += spirv_cb.symbol_name;
+            ret += ";\n";
+        }
         return ret;
     }
 
@@ -173,8 +179,14 @@ struct StoreOps
     {
         std::string ret;
         if(spirv_cb.enabled())
+        {
             ret += std::string("extern \"C\" __device__ void ") + spirv_cb.symbol_name
                    + "(scalar_type*, size_t, scalar_type, void*, void*);\n";
+            // declare a constant name for the load callback as well
+            ret += "__device__ auto store_cb_jit_fn = ";
+            ret += spirv_cb.symbol_name;
+            ret += ";\n";
+        }
         return ret;
     }
 

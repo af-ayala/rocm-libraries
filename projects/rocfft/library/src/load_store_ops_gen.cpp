@@ -121,13 +121,17 @@ void make_load_store_ops(Function&                      f,
 std::string load_store_decls(const std::optional<LoadOps>&  loadOps,
                              const std::optional<StoreOps>& storeOps)
 {
+    // FIXME: need to namespace things so user-chosen symbols can't
+    // (easily) collide with our internal syms
     std::string ops_declarations;
-    if(loadOps && loadOps->enabled())
+    if(loadOps && loadOps->has_spirv())
     {
+        ops_declarations += "#define ROCFFT_USE_JIT_CB_LOAD\n";
         ops_declarations += loadOps->forward_decls();
     }
-    if(storeOps && storeOps->enabled())
+    if(storeOps && storeOps->has_spirv())
     {
+        ops_declarations += "#define ROCFFT_USE_JIT_CB_STORE\n";
         ops_declarations += storeOps->forward_decls();
     }
     return ops_declarations;
